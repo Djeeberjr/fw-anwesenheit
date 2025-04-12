@@ -1,6 +1,6 @@
 use regex::Regex;
 
-pub fn ParseLine(line: &str) -> Option<String> {
+pub fn parse_line(line: &str) -> Option<String> {
     let regex = Regex::new(r"(?m)^\[\+\] UID.... (.*)$").unwrap();
     let result = regex.captures(line);
 

@@ -2,7 +2,7 @@ use std::error::Error;
 use std::process::{Command, Stdio};
 use std::io::{self, BufRead};
 
-pub fn RunPm3() -> Result<(), Box<dyn Error>> {
+pub fn run_pm3() -> Result<(), Box<dyn Error>> {
     let mut cmd = Command::new("stdbuf")
         .arg("-oL")
         .arg("pm3")
@@ -17,7 +17,7 @@ pub fn RunPm3() -> Result<(), Box<dyn Error>> {
     for line_result in reader.lines() {
         match line_result {
             Ok(line) => {
-                let parse_result = super::parser::ParseLine(&line);
+                let parse_result = super::parser::parse_line(&line);
                 if let Some(uid) = parse_result {
                     println!("UID: {}",uid);
                 }
@@ -30,5 +30,9 @@ pub fn RunPm3() -> Result<(), Box<dyn Error>> {
 
     let status = cmd.wait().expect("Failed to wait on child");
 
-    Ok(())
+    if status.success() {
+        Ok(())
+    }else {
+        Err("pm3 had non zero exit code".into())
+    }
 }
