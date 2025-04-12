@@ -1,0 +1,34 @@
+@startuml
+actor user
+
+
+main -> pm3 :start
+loop
+    pm3 -> pm3 : look for HITAG
+end
+
+user -> pm3 :show HITAG
+
+pm3 -> parser : parse ID
+parser -> pm3 : return ID
+
+pm3 --> main : send ID
+
+loop
+    main -> main : look for IDs
+end
+
+main -> idstore : send ID 
+idstore -> System : ask for  day
+alt
+    System -> idstore : return attendence_day
+else
+    create collections attendence_day
+        idstore -> attendence_day : create new attendence_day
+ 
+end
+
+idstore -> attendence_day : add ID
+attendence_day -> system : save json
+
+@enduml
