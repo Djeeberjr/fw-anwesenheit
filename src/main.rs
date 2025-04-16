@@ -26,15 +26,15 @@ async fn main() {
     });
 
     let store:Arc<Mutex<IDStore>> = Arc::new(Mutex::new(id_store::IDStore::new()));
+    let channel_store = store.clone();
 
     tokio::spawn(async move {
         while let Some(tally_id_string) = rx.recv().await {
-            println!("Got from channel: {}", tally_id_string);
-            store.lock().await.add_id(id_store::TallyID(tally_id_string));
+            channel_store.lock().await.add_id(id_store::TallyID(tally_id_string));
         }
     });
 
-    match start_webserver().await {
+    match start_webserver(store.clone()).await {
         Ok(()) => {}
         Err(e) => {
             eprintln!("Failed to start webserver: {}", e);

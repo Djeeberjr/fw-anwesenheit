@@ -58,6 +58,7 @@ impl IDStore {
     }
 
     pub fn export_csv(&self) -> Result<String, Box<dyn Error>> {
+        let mut csv = String::new();
         let seperator = ";";
         let mut user_ids: HashSet<TallyID> = HashSet::new();
 
@@ -74,23 +75,22 @@ impl IDStore {
         days.sort();
 
         let header = days.join(seperator);
-        println!("ID,{}", header);
+        csv.push_str(&format!("ID{}{}\n", seperator, header));
 
         for user_id in user_ids.iter() {
-            print!("{},", user_id.0);
+            csv.push_str(&user_id.0.to_string());
             for day in days.iter() {
-                let was_there: bool = self.days.get(day).unwrap().ids.contains(user_id);
+                let was_there: bool = self.days.get(day).ok_or("Failed to access day")?.ids.contains(user_id);
 
                 if was_there {
-                    print!("{}x", seperator);
+                    csv.push_str(&format!("{}x", seperator));
                 } else {
-                    print!("{}", seperator);
+                    csv.push_str(seperator);
                 }
             }
-            println!();
+            csv.push('\n');
         }
-
-        Ok("".to_owned())
+        Ok(csv)
     }
 }
 
