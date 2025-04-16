@@ -1,9 +1,18 @@
-use pm3::run_pm3;
+use pm3::{pm3_mock, run_pm3};
+use std::{sync::mpsc::channel, thread};
 
+mod id_store;
 mod parser;
 mod pm3;
-mod id_store;
 
 fn main() {
-    run_pm3().unwrap();
+    let (sender, receiver) = channel();
+    thread::spawn(move || {
+        // run_pm3(sender);
+        pm3_mock(sender);
+    });
+
+    while true {
+        println!("{}", receiver.recv().unwrap());
+    }
 }

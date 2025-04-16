@@ -1,8 +1,10 @@
 use std::error::Error;
-use std::process::{Command, Stdio};
 use std::io::{self, BufRead};
+use std::process::{Command, Stdio};
+use std::sync::mpsc::Sender;
+use std::{thread, time};
 
-pub fn run_pm3() -> Result<(), Box<dyn Error>> {
+pub fn run_pm3(sender: Sender<String>) -> Result<(), Box<dyn Error>> {
     let mut cmd = Command::new("stdbuf")
         .arg("-oL")
         .arg("pm3")
@@ -19,11 +21,16 @@ pub fn run_pm3() -> Result<(), Box<dyn Error>> {
             Ok(line) => {
                 let parse_result = super::parser::parse_line(&line);
                 if let Some(uid) = parse_result {
-                    println!("UID: {}",uid);
+                    match sender.send(uid) {
+                        Ok(_) => {}
+                        Err(e) => {
+                            eprintln!("Failed to send to channel: {}", e);
+                        }
+                    }
                 }
             }
             Err(e) => {
-                eprintln!("{}",e);
+                eprintln!("{}", e);
             }
         }
     }
@@ -32,7 +39,23 @@ pub fn run_pm3() -> Result<(), Box<dyn Error>> {
 
     if status.success() {
         Ok(())
-    }else {
+    } else {
         Err("pm3 had non zero exit code".into())
     }
+}
+
+pub fn pm3_mock(sender: Sender<String>) -> Result<(), Box<dyn Error>> {
+    #![allow(while_true)]
+    while true {
+        match sender.send("F1409618".to_owned()) {
+            Ok(()) => {}
+            Err(e) => {
+                eprintln!("Failed to send to channel: {}", e);
+            }
+        }
+
+        thread::sleep(time::Duration::from_secs(2));
+    }
+
+    Ok(())
 }
