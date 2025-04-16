@@ -1,15 +1,3 @@
-<<<<<<< HEAD
-use pm3::run_pm3;
-
-mod parser;
-mod pm3;
-mod id_store;
-mod buzzer;
-
-fn main() {
-    run_pm3().unwrap();
-}
-=======
 use pm3::{pm3_mock, run_pm3};
 use tokio::sync::mpsc;
 use webserver::start_webserver;
@@ -47,4 +35,3 @@ async fn main() {
         }
     }
 }
->>>>>>> eb39b09632efb1568079352e3d639edc79df65fd
