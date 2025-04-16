@@ -1,5 +1,8 @@
+use std::sync::Arc;
+
+use id_store::IDStore;
 use pm3::{pm3_mock, run_pm3};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, Mutex};
 use webserver::start_webserver;
 
 mod id_store;
@@ -12,7 +15,7 @@ async fn main() {
     let (tx, mut rx) = mpsc::channel::<String>(32);
 
     tokio::spawn(async move {
-        match pm3_mock(tx).await {
+        match run_pm3(tx).await {
             Ok(()) => {
                 println!("PM3 exited with an zero error code");
             }
@@ -22,9 +25,12 @@ async fn main() {
         }
     });
 
+    let store:Arc<Mutex<IDStore>> = Arc::new(Mutex::new(id_store::IDStore::new()));
+
     tokio::spawn(async move {
-        while let Some(line) = rx.recv().await {
-            println!("Got from channel: {}", line);
+        while let Some(tally_id_string) = rx.recv().await {
+            println!("Got from channel: {}", tally_id_string);
+            store.lock().await.add_id(id_store::TallyID(tally_id_string));
         }
     });
 

@@ -6,12 +6,12 @@ use std::{
 };
 
 #[derive(PartialEq, Eq, Deserialize, Serialize, Hash, Clone, PartialOrd, Ord)]
-pub struct TellyID(pub String);
+pub struct TallyID(pub String);
 
 #[derive(Deserialize, Serialize)]
 pub struct AttendanceDay {
     date: String,
-    ids: Vec<TellyID>,
+    ids: Vec<TallyID>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -31,7 +31,7 @@ impl IDStore {
         Ok(serde_json::from_str(&readed_string)?)
     }
 
-    pub fn add_id(&mut self, id: TellyID) {
+    pub fn add_id(&mut self, id: TallyID) {
         let day = self.get_current_day();
 
         day.add_id(id);
@@ -59,7 +59,7 @@ impl IDStore {
 
     pub fn export_csv(&self) -> Result<String, Box<dyn Error>> {
         let seperator = ";";
-        let mut user_ids: HashSet<TellyID> = HashSet::new();
+        let mut user_ids: HashSet<TallyID> = HashSet::new();
 
         for day in self.days.values() {
             for id in day.ids.iter() {
@@ -67,7 +67,7 @@ impl IDStore {
             }
         }
 
-        let mut user_ids: Vec<TellyID> = user_ids.into_iter().collect();
+        let mut user_ids: Vec<TallyID> = user_ids.into_iter().collect();
         user_ids.sort();
 
         let mut days: Vec<String> = self.days.keys().cloned().collect();
@@ -102,7 +102,7 @@ impl AttendanceDay {
         }
     }
 
-    fn add_id(&mut self, id: TellyID) {
+    fn add_id(&mut self, id: TallyID) {
         if self.ids.contains(&id) {
             return;
         }

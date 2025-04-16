@@ -1,19 +1,28 @@
+use rocket::Config;
 use rocket::{get, http::ContentType, response::content::RawHtml, routes};
 use rust_embed::Embed;
 use std::borrow::Cow;
 use std::ffi::OsStr;
+
 
 #[derive(Embed)]
 #[folder = "web/dist"]
 struct Asset;
 
 pub async fn start_webserver() -> Result<(), rocket::Error> {
-    rocket::build()
+    let config = Config {
+        address: "0.0.0.0".parse().unwrap(), // Listen on all interfaces
+        port: 8000,
+        ..Config::default()
+    };
+
+    rocket::custom(config)
         .mount("/", routes![static_files,index])
         .launch()
         .await?;
     Ok(())
 }
+
 
 #[get("/")]
 fn index() -> Option<RawHtml<Cow<'static, [u8]>>> {
