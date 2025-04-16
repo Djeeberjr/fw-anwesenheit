@@ -33,8 +33,8 @@ pub fn beep_ack() {
 }
 
 pub fn beep_nak() {
-        // GPIO 17, Träger = 2300 Hz, Ton = 440 Hz, Dauer = 1 Sekunde
-        modulated_tone(4, 2300, 700, 500);
-        modulated_tone(4, 2300, 500, 500);
+    // GPIO 17, Träger = 2300 Hz, Ton = 440 Hz, Dauer = 1 Sekunde
+    modulated_tone(4, 2300, 700, 500);
+    modulated_tone(4, 2300, 500, 500);
 }
 
