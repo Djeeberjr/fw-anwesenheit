@@ -29,8 +29,10 @@ pub async fn run_pm3(tx: mpsc::Sender<String>) -> Result<(), Box<dyn Error>> {
     for line_result in reader.lines() {
         match line_result {
             Ok(line) => {
+                println!("line: {}", line);
                 let parse_result = super::parser::parse_line(&line);
                 if let Some(uid) = parse_result {
+                    println!("uid {}", uid);
                     match tx.send(uid).await {
                         Ok(()) => {}
                         Err(e) => {
