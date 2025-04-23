@@ -1,3 +1,4 @@
+use std::env;
 use std::error::Error;
 use std::io::{self, BufRead};
 use std::process::{Command, Stdio};
@@ -6,9 +7,17 @@ use tokio::time::{Duration, sleep};
 use tokio::sync::mpsc;
 
 pub async fn run_pm3(tx: mpsc::Sender<String>) -> Result<(), Box<dyn Error>> {
+    let pm3_path = match env::var("PM3_BIN") {
+        Ok(path) => path,
+        Err(_) => {
+            println!("PM3_BIN not set. Using default value");
+            "pm3".to_owned()
+        },
+    };
+
     let mut cmd = Command::new("stdbuf")
         .arg("-oL")
-        .arg("pm3")
+        .arg(pm3_path)
         .arg("-c")
         .arg("lf hitag reader -@")
         .stdout(Stdio::piped())
