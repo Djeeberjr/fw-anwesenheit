@@ -34,7 +34,6 @@ impl IDStore {
     pub fn add_id(&mut self, id: TallyID) {
         let day = self.get_current_day();
 
-        println!("id: {}", id.0);
         day.add_id(id);
     }
 

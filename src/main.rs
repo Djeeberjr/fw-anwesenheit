@@ -12,7 +12,6 @@ mod webserver;
 
 #[tokio::main]
 async fn main() {
-    println!("Heeeeeeeeeeeelllllllooooooo start!");
     let (tx, mut rx) = mpsc::channel::<String>(1);
 
     tokio::spawn(async move {
