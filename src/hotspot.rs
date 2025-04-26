@@ -6,6 +6,8 @@ const CON_NAME: &str = "fwa-hotspot";
 const PASSWORD: &str = "hunter22";
 const IPV4_ADDRES: &str = "192.168.4.1/24";
 
+/// Create the connection in NM
+/// Will fail if already exists
 async fn create_hotspot() -> Result<(), Box<dyn Error>> {
     let mut cmd = Command::new("nmcli")
         .args(["device", "wifi", "hotspot"])
@@ -42,6 +44,7 @@ async fn create_hotspot() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+/// Checks if the connection already exists
 async fn exists() -> Result<bool, Box<dyn Error>> {
     let mut cmd = Command::new("nmcli")
         .args(["connection", "show"])

@@ -6,6 +6,9 @@ use std::process::{Command, Stdio};
 use tokio::sync::mpsc;
 use tokio::time::{Duration, sleep};
 
+/// Runs the pm3 binary and monitors it's output
+/// The pm3 binary is ether set in the env var PM3_BIN or found in the path
+/// The ouput is parsed and send via the `tx` channel
 pub async fn run_pm3(tx: mpsc::Sender<String>) -> Result<(), Box<dyn Error>> {
     let pm3_path = match env::var("PM3_BIN") {
         Ok(path) => path,
@@ -56,6 +59,7 @@ pub async fn run_pm3(tx: mpsc::Sender<String>) -> Result<(), Box<dyn Error>> {
     }
 }
 
+/// Mocks the `run_pm3` command. Outputs the same ID every second.
 pub async fn pm3_mock(tx: mpsc::Sender<String>) -> Result<(), Box<dyn Error>> {
     #![allow(while_true)]
     while true {

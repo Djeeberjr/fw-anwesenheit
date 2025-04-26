@@ -7,6 +7,7 @@ use std::{
     fs,
 };
 
+/// Represents the ID that is stored on the Tally
 #[derive(PartialEq, Eq, Deserialize, Serialize, Hash, Clone, PartialOrd, Ord)]
 pub struct TallyID(pub String);
 
@@ -16,12 +17,14 @@ impl Display for TallyID {
     }
 }
 
+/// Represents a single day that IDs can attend
 #[derive(Deserialize, Serialize)]
 pub struct AttendanceDay {
     date: String,
     ids: Vec<TallyID>,
 }
 
+/// Stores all the days
 #[derive(Deserialize, Serialize)]
 pub struct IDStore {
     days: HashMap<String, AttendanceDay>,
@@ -34,17 +37,22 @@ impl IDStore {
         }
     }
 
+    /// Creats a new `IDStore` from a json file
     pub fn new_from_json(filepath: &str) -> Result<Self, Box<dyn Error>> {
         let readed_string = fs::read_to_string(filepath)?;
         Ok(serde_json::from_str(&readed_string)?)
     }
 
+    /// Add a new id for the current day
+    /// Duplicates will get ignored
     pub fn add_id(&mut self, id: TallyID) {
         let day = self.get_current_day();
 
         day.add_id(id);
     }
 
+    /// Get the `AttendanceDay` of the current day
+    /// Creates a new if not exists
     pub fn get_current_day(&mut self) -> &mut AttendanceDay {
         let current_day = get_day_str();
 
@@ -60,11 +68,14 @@ impl IDStore {
         self.days.get_mut(&current_day.clone()).unwrap()
     }
 
+    /// Writes the store to a json file
     pub fn export_json(&self, filepath: &str) -> Result<(), Box<dyn Error>> {
         // Serialize it to a JSON string and safe it in filepath file
         Ok(fs::write(filepath, serde_json::to_string(&self)?)?)
     }
 
+    /// Export the store to a csv file.
+    /// With days in the rows and IDs in the collum.
     pub fn export_csv(&self) -> Result<String, Box<dyn Error>> {
         let mut csv = String::new();
         let seperator = ";";
@@ -88,7 +99,12 @@ impl IDStore {
         for user_id in user_ids.iter() {
             csv.push_str(&user_id.0.to_string());
             for day in days.iter() {
-                let was_there: bool = self.days.get(day).ok_or("Failed to access day")?.ids.contains(user_id);
+                let was_there: bool = self
+                    .days
+                    .get(day)
+                    .ok_or("Failed to access day")?
+                    .ids
+                    .contains(user_id);
 
                 if was_there {
                     csv.push_str(&format!("{}x", seperator));
