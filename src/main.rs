@@ -1,8 +1,9 @@
-use std::sync::Arc;
-
 use id_store::IDStore;
+use log::{LevelFilter, error, info, warn};
 use pm3::{pm3_mock, run_pm3};
-use tokio::sync::{mpsc, Mutex};
+use simplelog::{ConfigBuilder, SimpleLogger};
+use std::{env, sync::Arc};
+use tokio::sync::{Mutex, mpsc};
 use webserver::start_webserver;
 
 mod id_store;
@@ -10,17 +11,40 @@ mod parser;
 mod pm3;
 mod webserver;
 
+fn setup_logger() {
+    let log_level = env::var("LOG_LEVEL")
+        .ok()
+        .and_then(|level| level.parse::<LevelFilter>().ok())
+        .unwrap_or({
+            if cfg!(debug_assertions) {
+                LevelFilter::Debug
+            } else {
+                LevelFilter::Warn
+            }
+        });
+
+    let config = ConfigBuilder::new()
+        .set_target_level(LevelFilter::Error)
+        .build();
+
+    let _ = SimpleLogger::init(log_level, config);
+}
+
 #[tokio::main]
 async fn main() {
+    setup_logger();
+
+    info!("Starting application");
+
     let (tx, mut rx) = mpsc::channel::<String>(1);
 
     tokio::spawn(async move {
         match run_pm3(tx).await {
             Ok(()) => {
-                println!("PM3 exited with an zero error code");
+                warn!("PM3 exited with a zero exit code");
             }
             Err(e) => {
-                println!("PM3 failed to run: {}", e);
+                error!("Failed to run PM3: {}", e);
             }
         }
     });
@@ -37,7 +61,7 @@ async fn main() {
     match start_webserver(store.clone()).await {
         Ok(()) => {}
         Err(e) => {
-            eprintln!("Failed to start webserver: {}", e);
+            error!("Failed to start webserver: {}", e);
         }
     }
 }

@@ -1,3 +1,4 @@
+use log::{error, info};
 use rocket::http::Status;
 use rocket::{Config, State};
 use rocket::{get, http::ContentType, response::content::RawHtml, routes};
@@ -49,10 +50,11 @@ fn static_files(file: std::path::PathBuf) -> Option<(ContentType, Vec<u8>)> {
 
 #[get("/api/csv")]
 async fn export_csv(manager: &State<Arc<Mutex<IDStore>>>) -> Result<String, Status> {
+    info!("Exporting CSV");
     match manager.lock().await.export_csv() {
         Ok(csv) => Ok(csv),
         Err(e) => {
-            eprintln!("Failed to generate csv: {}", e);
+            error!("Failed to generate csv: {}", e);
             Err(Status::InternalServerError)
         }
     }

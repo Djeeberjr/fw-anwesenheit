@@ -1,12 +1,20 @@
+use log::info;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
     error::Error,
+    fmt::Display,
     fs,
 };
 
 #[derive(PartialEq, Eq, Deserialize, Serialize, Hash, Clone, PartialOrd, Ord)]
 pub struct TallyID(pub String);
+
+impl Display for TallyID {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 #[derive(Deserialize, Serialize)]
 pub struct AttendanceDay {
@@ -106,6 +114,7 @@ impl AttendanceDay {
         if self.ids.contains(&id) {
             return;
         }
+        info!("Adding id: {}", id);
         self.ids.push(id);
     }
 }
