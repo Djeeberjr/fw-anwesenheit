@@ -2,14 +2,15 @@ use id_store::IDStore;
 use log::{LevelFilter, error, info, warn};
 use pm3::{pm3_mock, run_pm3};
 use simplelog::{ConfigBuilder, SimpleLogger};
-use std::{env, sync::Arc};
-use tokio::sync::{Mutex, mpsc};
+use std::{env, error::Error, sync::Arc};
+use tokio::{fs, sync::{mpsc, Mutex}};
 use webserver::start_webserver;
 
 mod id_store;
 mod parser;
 mod pm3;
 mod webserver;
+const STORE_PATH: &str = "./data.json";
 
 fn setup_logger() {
     let log_level = env::var("LOG_LEVEL")
@@ -31,7 +32,7 @@ fn setup_logger() {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(),Box<dyn Error>>{
     setup_logger();
 
     info!("Starting application");
@@ -49,9 +50,18 @@ async fn main() {
         }
     });
 
-    let store:Arc<Mutex<IDStore>> = Arc::new(Mutex::new(id_store::IDStore::new()));
-    let channel_store = store.clone();
 
+    let raw_store = if fs::try_exists(STORE_PATH).await? {
+        info!("Loading data from file");
+        IDStore::new_from_json(STORE_PATH)?
+    }else {
+        info!("No data file found. Creating empty one.");
+        IDStore::new()
+    };
+
+    let store: Arc<Mutex<IDStore>> = Arc::new(Mutex::new(raw_store));
+
+    let channel_store = store.clone();
     tokio::spawn(async move {
         while let Some(tally_id_string) = rx.recv().await {
             channel_store.lock().await.add_id(id_store::TallyID(tally_id_string));
@@ -64,4 +74,5 @@ async fn main() {
             error!("Failed to start webserver: {}", e);
         }
     }
+    Ok(())
 }
