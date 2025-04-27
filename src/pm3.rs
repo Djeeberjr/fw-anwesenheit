@@ -1,4 +1,4 @@
-use log::{debug, error, info};
+use log::{debug, error, info, trace};
 use std::env;
 use std::error::Error;
 use std::io::{self, BufRead};
@@ -32,7 +32,7 @@ pub async fn run_pm3(tx: mpsc::Sender<String>) -> Result<(), Box<dyn Error>> {
     for line_result in reader.lines() {
         match line_result {
             Ok(line) => {
-                debug!("PM3: {}", line);
+                trace!("PM3: {}", line);
                 let parse_result = super::parser::parse_line(&line);
                 if let Some(uid) = parse_result {
                     debug!("Read ID: {}", uid);
@@ -50,7 +50,7 @@ pub async fn run_pm3(tx: mpsc::Sender<String>) -> Result<(), Box<dyn Error>> {
         }
     }
 
-    let status = cmd.wait().expect("Failed to wait on child");
+    let status = cmd.wait()?;
 
     if status.success() {
         Ok(())
@@ -61,8 +61,7 @@ pub async fn run_pm3(tx: mpsc::Sender<String>) -> Result<(), Box<dyn Error>> {
 
 /// Mocks the `run_pm3` command. Outputs the same ID every second.
 pub async fn pm3_mock(tx: mpsc::Sender<String>) -> Result<(), Box<dyn Error>> {
-    #![allow(while_true)]
-    while true {
+    loop {
         match tx.send("F1409618".to_owned()).await {
             Ok(()) => {}
             Err(e) => {
@@ -72,6 +71,4 @@ pub async fn pm3_mock(tx: mpsc::Sender<String>) -> Result<(), Box<dyn Error>> {
 
         sleep(Duration::from_millis(1000)).await;
     }
-
-    Ok(())
 }
