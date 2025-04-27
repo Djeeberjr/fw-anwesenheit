@@ -3,8 +3,8 @@ use std::{
     collections::{HashMap, HashSet},
     error::Error,
     fmt::Display,
-    fs,
 };
+use tokio::fs;
 
 /// Represents the ID that is stored on the Tally
 #[derive(PartialEq, Eq, Deserialize, Serialize, Hash, Clone, PartialOrd, Ord)]
@@ -37,9 +37,9 @@ impl IDStore {
     }
 
     /// Creats a new `IDStore` from a json file
-    pub fn new_from_json(filepath: &str) -> Result<Self, Box<dyn Error>> {
-        let readed_string = fs::read_to_string(filepath)?;
-        Ok(serde_json::from_str(&readed_string)?)
+    pub async fn new_from_json(filepath: &str) -> Result<Self, Box<dyn Error>> {
+        let read_string = fs::read_to_string(filepath).await?;
+        Ok(serde_json::from_str(&read_string)?)
     }
 
     /// Add a new id for the current day
@@ -66,9 +66,9 @@ impl IDStore {
     }
 
     /// Writes the store to a json file
-    pub fn export_json(&self, filepath: &str) -> Result<(), Box<dyn Error>> {
-        // Serialize it to a JSON string and safe it in filepath file
-        Ok(fs::write(filepath, serde_json::to_string(&self)?)?)
+    pub async fn export_json(&self, filepath: &str) -> Result<(), Box<dyn Error>> {
+        fs::write(filepath, serde_json::to_string(&self)?).await?;
+        Ok(())
     }
 
     /// Export the store to a csv file.

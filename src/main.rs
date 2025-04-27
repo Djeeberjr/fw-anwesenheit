@@ -58,7 +58,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let raw_store = if fs::try_exists(STORE_PATH).await? {
         info!("Loading data from file");
-        IDStore::new_from_json(STORE_PATH)?
+        IDStore::new_from_json(STORE_PATH).await?
     } else {
         info!("No data file found. Creating empty one.");
         IDStore::new()
@@ -77,7 +77,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 info!("Added new id to current day");
                 // TODO: trigger the buzzer
 
-                if let Err(e) = channel_store.lock().await.export_json(STORE_PATH) {
+                if let Err(e) = channel_store.lock().await.export_json(STORE_PATH).await {
                     error!("Failed to save id store to file: {}", e);
                     // TODO: How to handle a failure to save ?
                 }
