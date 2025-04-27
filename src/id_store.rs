@@ -44,14 +44,8 @@ impl IDStore {
 
     /// Add a new id for the current day
     /// Returns false if ID is already present at the current day.
-    /// Can fail because the store will be saved to a file.
-    pub fn add_id(&mut self, id: TallyID) -> Result<bool, Box<dyn Error>> {
-        if self.get_current_day().add_id(id) {
-            self.export_json("./data.json")?;
-            return Ok(true);
-        }
-
-        Ok(false)
+    pub fn add_id(&mut self, id: TallyID) -> bool {
+        self.get_current_day().add_id(id)
     }
 
     /// Get the `AttendanceDay` of the current day

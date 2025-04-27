@@ -67,20 +67,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let channel_store = store.clone();
     tokio::spawn(async move {
         while let Some(tally_id_string) = rx.recv().await {
-            match channel_store
+            if channel_store
                 .lock()
                 .await
                 .add_id(id_store::TallyID(tally_id_string))
             {
-                Ok(added) => {
-                    if added {
-                        debug!("~Beep~ Added new ID");
-                        // TODO: Add buzzer here
-                    }
-                }
-                Err(e) => {
-                    error!("Failed to save id to the store: {}", e);
-                    // TODO: What to do if the ID could not be saved ?
+                info!("Added new id to current day");
+                // TODO: trigger the buzzer
+
+                if let Err(e) = channel_store.lock().await.export_json(STORE_PATH) {
+                    error!("Failed to save id store to file: {}", e);
+                    // TODO: How to handle a failure to save ?
                 }
             }
         }
