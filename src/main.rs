@@ -1,6 +1,6 @@
 use id_store::IDStore;
-use pm3::{pm3_mock, run_pm3};
 use log::{LevelFilter, error, info, warn};
+use pm3::run_pm3;
 use simplelog::{ConfigBuilder, SimpleLogger};
 use std::{env, error::Error, sync::Arc};
 use tokio::{
