@@ -1,6 +1,6 @@
 use id_store::IDStore;
-use log::{LevelFilter, debug, error, info, warn};
 use pm3::{pm3_mock, run_pm3};
+use log::{LevelFilter, error, info, warn};
 use simplelog::{ConfigBuilder, SimpleLogger};
 use std::{env, error::Error, sync::Arc};
 use tokio::{
@@ -29,7 +29,9 @@ fn setup_logger() {
         });
 
     let config = ConfigBuilder::new()
-        .set_target_level(LevelFilter::Error)
+        .set_target_level(LevelFilter::Off)
+        .set_location_level(LevelFilter::Off)
+        .set_thread_level(LevelFilter::Off)
         .build();
 
     let _ = SimpleLogger::init(log_level, config);
