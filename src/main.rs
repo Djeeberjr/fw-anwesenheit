@@ -1,15 +1,19 @@
 use id_store::IDStore;
-use log::{LevelFilter, error, info, warn};
+use log::{LevelFilter, debug, error, info, warn};
 use pm3::{pm3_mock, run_pm3};
 use simplelog::{ConfigBuilder, SimpleLogger};
 use std::{env, error::Error, sync::Arc};
-use tokio::{fs, sync::{mpsc, Mutex}};
+use tokio::{
+    fs,
+    sync::{Mutex, mpsc},
+};
 use webserver::start_webserver;
 
 mod id_store;
 mod parser;
 mod pm3;
 mod webserver;
+
 const STORE_PATH: &str = "./data.json";
 
 fn setup_logger() {
@@ -32,7 +36,7 @@ fn setup_logger() {
 }
 
 #[tokio::main]
-async fn main() -> Result<(),Box<dyn Error>>{
+async fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     info!("Starting application");
@@ -50,11 +54,10 @@ async fn main() -> Result<(),Box<dyn Error>>{
         }
     });
 
-
     let raw_store = if fs::try_exists(STORE_PATH).await? {
         info!("Loading data from file");
         IDStore::new_from_json(STORE_PATH)?
-    }else {
+    } else {
         info!("No data file found. Creating empty one.");
         IDStore::new()
     };
@@ -64,7 +67,22 @@ async fn main() -> Result<(),Box<dyn Error>>{
     let channel_store = store.clone();
     tokio::spawn(async move {
         while let Some(tally_id_string) = rx.recv().await {
-            channel_store.lock().await.add_id(id_store::TallyID(tally_id_string));
+            match channel_store
+                .lock()
+                .await
+                .add_id(id_store::TallyID(tally_id_string))
+            {
+                Ok(added) => {
+                    if added {
+                        debug!("~Beep~ Added new ID");
+                        // TODO: Add buzzer here
+                    }
+                }
+                Err(e) => {
+                    error!("Failed to save id to the store: {}", e);
+                    // TODO: What to do if the ID could not be saved ?
+                }
+            }
         }
     });
 
@@ -74,5 +92,6 @@ async fn main() -> Result<(),Box<dyn Error>>{
             error!("Failed to start webserver: {}", e);
         }
     }
+
     Ok(())
 }

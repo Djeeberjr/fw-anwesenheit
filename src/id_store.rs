@@ -1,4 +1,3 @@
-use log::info;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
@@ -44,11 +43,15 @@ impl IDStore {
     }
 
     /// Add a new id for the current day
-    /// Duplicates will get ignored
-    pub fn add_id(&mut self, id: TallyID) {
-        let day = self.get_current_day();
+    /// Returns false if ID is already present at the current day.
+    /// Can fail because the store will be saved to a file.
+    pub fn add_id(&mut self, id: TallyID) -> Result<bool, Box<dyn Error>> {
+        if self.get_current_day().add_id(id) {
+            self.export_json("./data.json")?;
+            return Ok(true);
+        }
 
-        day.add_id(id);
+        Ok(false)
     }
 
     /// Get the `AttendanceDay` of the current day
@@ -126,12 +129,14 @@ impl AttendanceDay {
         }
     }
 
-    fn add_id(&mut self, id: TallyID) {
+    // Add an ID to the day.
+    // Returns false if ID was already present
+    fn add_id(&mut self, id: TallyID) -> bool {
         if self.ids.contains(&id) {
-            return;
+            return false;
         }
-        info!("Adding id: {}", id);
         self.ids.push(id);
+        true
     }
 }
 
