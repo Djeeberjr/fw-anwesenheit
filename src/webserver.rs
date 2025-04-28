@@ -1,9 +1,10 @@
-use log::{error, info};
+use log::{error, info, warn};
 use rocket::http::Status;
 use rocket::{Config, State};
 use rocket::{get, http::ContentType, response::content::RawHtml, routes};
 use rust_embed::Embed;
 use std::borrow::Cow;
+use std::env;
 use std::ffi::OsStr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -15,9 +16,17 @@ use crate::id_store::IDStore;
 struct Asset;
 
 pub async fn start_webserver(store: Arc<Mutex<IDStore>>) -> Result<(), rocket::Error> {
+    let port = match env::var("HTTP_PORT") {
+        Ok(port) => port.parse().unwrap_or_else(|_| {
+            warn!("Failed to parse HTTP_PORT. Using default 80");
+            80
+        }),
+        Err(_) => 80,
+    };
+
     let config = Config {
         address: "0.0.0.0".parse().unwrap(), // Listen on all interfaces
-        port: 8000,
+        port,
         ..Config::default()
     };
 
