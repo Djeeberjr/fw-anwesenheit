@@ -79,8 +79,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .add_id(id_store::TallyID(tally_id_string))
             {
                 info!("Added new id to current day");
-                // TODO: trigger the buzzer
-                buzzer::beep_ack();
+                buzzer::beep_ack().await;
                 // led.set_named_color_time(NamedColor::Green, 1); //led is green for 1 sec
 
                 if let Err(e) = channel_store.lock().await.export_json(STORE_PATH).await {
