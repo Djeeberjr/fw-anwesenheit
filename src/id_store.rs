@@ -4,6 +4,11 @@ use std::{
     error::Error,
     fmt::Display,
 };
+
+use crate::led::Led;
+use tokio::fs;
+
+use crate::led::Led;
 use tokio::fs;
 
 /// Represents the ID that is stored on the Tally
@@ -130,7 +135,12 @@ impl AttendanceDay {
             return false;
         }
         self.ids.push(id);
-        true
+        
+
+        buzzer::beep_ack();
+        led.set_named_color_time(NamedColor::Green, 1);     //led is green for 1 sec
+
+        return true;
     }
 }
 

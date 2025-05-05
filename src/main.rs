@@ -13,6 +13,10 @@ mod id_store;
 mod parser;
 mod pm3;
 mod webserver;
+mod color;
+mod led;
+mod buzzer;
+
 
 const STORE_PATH: &str = "./data.json";
 
@@ -84,6 +88,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
         }
     });
+
+    tokio::spawn(async move {
+        
+    })
 
     match start_webserver(store.clone()).await {
         Ok(()) => {}
