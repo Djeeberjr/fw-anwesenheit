@@ -1,17 +1,6 @@
-#[derive(Clone, Copy)]
-pub struct Color {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-}
+use rgb::Rgb;
 
-impl Color {
-    pub fn to_grb(self) -> [u8; 3] {
-        [self.g, self.r, self.b]
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub enum NamedColor {
     Red,
     Green,
@@ -23,29 +12,29 @@ pub enum NamedColor {
     Magenta,
 }
 
-impl From<NamedColor> for Color {
-    fn from(named: NamedColor) -> Self {
-        match named {
-            NamedColor::Red => Color { r: 255, g: 0, b: 0 },
-            NamedColor::Green => Color { r: 0, g: 255, b: 0 },
-            NamedColor::Blue => Color { r: 0, g: 0, b: 255 },
-            NamedColor::White => Color {
+impl Into<Rgb<u8>> for NamedColor {
+    fn into(self) -> Rgb<u8> {
+        match self {
+            NamedColor::Red => Rgb { r: 255, g: 0, b: 0 },
+            NamedColor::Green => Rgb { r: 0, g: 255, b: 0 },
+            NamedColor::Blue => Rgb { r: 0, g: 0, b: 255 },
+            NamedColor::White => Rgb {
                 r: 255,
                 g: 255,
                 b: 255,
             },
-            NamedColor::Off => Color { r: 0, g: 0, b: 0 },
-            NamedColor::Yellow => Color {
+            NamedColor::Off => Rgb { r: 0, g: 0, b: 0 },
+            NamedColor::Yellow => Rgb {
                 r: 255,
                 g: 255,
                 b: 0,
             },
-            NamedColor::Cyan => Color {
+            NamedColor::Cyan => Rgb {
                 r: 0,
                 g: 255,
                 b: 255,
             },
-            NamedColor::Magenta => Color {
+            NamedColor::Magenta => Rgb {
                 r: 255,
                 g: 0,
                 b: 255,
@@ -53,3 +42,15 @@ impl From<NamedColor> for Color {
         }
     }
 }
+
+
+impl IntoIterator for NamedColor {
+    type Item = Self;
+
+    type IntoIter = std::vec::IntoIter<Self>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        vec![self].into_iter()
+    }
+}
+
