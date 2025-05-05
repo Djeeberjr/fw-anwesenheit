@@ -1,5 +1,10 @@
 # fw-anwesenheit
 
+# Setup 
+
+In order to use the LED we need to enable the SPI interface on the Rpi. 
+You can enable it by running `sudo raspi-config`, or by manually adding `dtparam=spi=on` to `/boot/firmware/config.txt`.
+
 # Config 
 
 Environment variables:
