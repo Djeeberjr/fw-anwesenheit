@@ -1,5 +1,5 @@
 use rppal::gpio::{Gpio, OutputPin};
-use std::time;
+use std::{error::Error, time};
 use tokio::time::sleep;
 
 pub struct GPIOBuzzer {
@@ -7,7 +7,7 @@ pub struct GPIOBuzzer {
 }
 
 impl GPIOBuzzer {
-    pub fn new(pin_num: u8) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(pin_num: u8) -> Result<Self, Box<dyn Error>> {
         let gpio = Gpio::new()?;
         let pin = gpio.get(pin_num)?.into_output();
 

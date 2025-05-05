@@ -1,3 +1,4 @@
+use buzzer::GPIOBuzzer;
 use color::NamedColor;
 use id_store::IDStore;
 use log::{LevelFilter, error, info, warn};
@@ -69,8 +70,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
 
     let store: Arc<Mutex<IDStore>> = Arc::new(Mutex::new(raw_store));
-
-    let mut gpio_buzzer = buzzer::GPIOBuzzer::new(4)?;
+    let gpio_buzzer: Arc<Mutex<GPIOBuzzer>> = Arc::new(Mutex::new(buzzer::GPIOBuzzer::new(4)?));
 
     let channel_store = store.clone();
     tokio::spawn(async move {
@@ -82,11 +82,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
             {
                 info!("Added new id to current day");
                 // led.set_named_color_time(NamedColor::Green, 1); //led is green for 1 sec
-                gpio_buzzer.beep_ack().await;
+                gpio_buzzer.lock().await.beep_ack().await;
 
                 if let Err(e) = channel_store.lock().await.export_json(STORE_PATH).await {
                     error!("Failed to save id store to file: {}", e);
                     // TODO: How to handle a failure to save ?
+                    gpio_buzzer.lock().await.beep_nak().await;
                 }
             }
         }

@@ -4,7 +4,6 @@ use std::{
     error::Error,
     fmt::Display,
 };
-
 use tokio::fs;
 
 /// Represents the ID that is stored on the Tally
@@ -67,7 +66,7 @@ impl IDStore {
     }
 
     /// Writes the store to a json file
-    pub async fn export_json(&self, filepath: &str) -> Result<(), Box<dyn Error>> {
+    pub async fn export_json(&self, filepath: &str) -> Result<(), Box<dyn Error + Send + Sync>> {
         fs::write(filepath, serde_json::to_string(&self)?).await?;
         Ok(())
     }
