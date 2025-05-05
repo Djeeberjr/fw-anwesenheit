@@ -20,6 +20,7 @@ mod pm3;
 mod webserver;
 
 const STORE_PATH: &str = "./data.json";
+const BUZZER_PIN: u8 = 26;
 
 fn setup_logger() {
     let log_level = env::var("LOG_LEVEL")
@@ -70,7 +71,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
 
     let store: Arc<Mutex<IDStore>> = Arc::new(Mutex::new(raw_store));
-    let gpio_buzzer: Arc<Mutex<GPIOBuzzer>> = Arc::new(Mutex::new(buzzer::GPIOBuzzer::new(4)?));
+    let gpio_buzzer: Arc<Mutex<GPIOBuzzer>> = Arc::new(Mutex::new(buzzer::GPIOBuzzer::new(BUZZER_PIN)?));
 
     let channel_store = store.clone();
     tokio::spawn(async move {

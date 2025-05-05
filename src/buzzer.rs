@@ -38,19 +38,19 @@ impl GPIOBuzzer {
     }
     pub async fn beep_ack(&mut self) {
         // carrier  = 2300 Hz, sound = 440 Hz, duration = 1 sec
-        self.modulated_tone(2300, 500, 500).await;
-        self.modulated_tone(2300, 700, 500).await;
+        self.modulated_tone(2300, 659, 400).await;
+        self.modulated_tone(2300, 784,100).await;
     }
 
     pub async fn beep_nak(&mut self) {
         // carrier  = 2300 Hz, sound = 440 Hz, duration = 1 sec
-        self.modulated_tone(2300, 700, 500).await;
-        self.modulated_tone(2300, 500, 500).await;
+        self.modulated_tone(2300, 659, 400).await;
+        self.modulated_tone(2300, 523, 100).await;
     }
 
     pub async fn beep_unnkown(&mut self) {
-        self.modulated_tone(2300, 500, 500).await;
-        self.modulated_tone(2300, 500, 500).await;
-        self.modulated_tone(2300, 500, 500).await;
+        self.modulated_tone(2300, 784, 150).await;
+        self.modulated_tone(2300, 659, 150).await;
+        self.modulated_tone(2300, 500, 150).await;
     }
 }
