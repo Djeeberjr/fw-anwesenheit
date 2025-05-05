@@ -1,10 +1,9 @@
 use rppal::spi::{Bus, Mode, SlaveSelect, Spi};
-use smart_leds::{SmartLedsWrite, RGB8};
+use smart_leds::{RGB8, SmartLedsWrite};
 use ws2812_spi::Ws2812;
 
-
 pub struct Led {
-    controller:  Ws2812<Spi>,
+    controller: Ws2812<Spi>,
 }
 
 impl Led {

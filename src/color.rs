@@ -29,11 +29,27 @@ impl From<NamedColor> for Color {
             NamedColor::Red => Color { r: 255, g: 0, b: 0 },
             NamedColor::Green => Color { r: 0, g: 255, b: 0 },
             NamedColor::Blue => Color { r: 0, g: 0, b: 255 },
-            NamedColor::White => Color { r: 255, g: 255, b: 255 },
+            NamedColor::White => Color {
+                r: 255,
+                g: 255,
+                b: 255,
+            },
             NamedColor::Off => Color { r: 0, g: 0, b: 0 },
-            NamedColor::Yellow => Color { r: 255, g: 255, b: 0 },
-            NamedColor::Cyan => Color { r: 0, g: 255, b: 255 },
-            NamedColor::Magenta => Color { r: 255, g: 0, b: 255 },
+            NamedColor::Yellow => Color {
+                r: 255,
+                g: 255,
+                b: 0,
+            },
+            NamedColor::Cyan => Color {
+                r: 0,
+                g: 255,
+                b: 255,
+            },
+            NamedColor::Magenta => Color {
+                r: 255,
+                g: 0,
+                b: 255,
+            },
         }
     }
 }

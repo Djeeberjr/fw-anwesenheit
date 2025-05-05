@@ -15,7 +15,7 @@ rust-embed = "8.7.0"
 log = "0.4.27"
 simplelog = "0.12.2"
 
-rppal = "0.22.1"
+rppal = { version = "0.22.1", features = ["hal"] }
 smart-leds = "0.3"
 ws2812-spi = "0.3"
 

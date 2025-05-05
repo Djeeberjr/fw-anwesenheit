@@ -1,3 +1,4 @@
+use color::NamedColor;
 use id_store::IDStore;
 use log::{LevelFilter, error, info, warn};
 use pm3::run_pm3;
@@ -9,14 +10,13 @@ use tokio::{
 };
 use webserver::start_webserver;
 
+mod buzzer;
+mod color;
 mod id_store;
+mod led;
 mod parser;
 mod pm3;
 mod webserver;
-mod color;
-mod led;
-mod buzzer;
-
 
 const STORE_PATH: &str = "./data.json";
 
@@ -80,6 +80,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             {
                 info!("Added new id to current day");
                 // TODO: trigger the buzzer
+                buzzer::beep_ack();
+                // led.set_named_color_time(NamedColor::Green, 1); //led is green for 1 sec
 
                 if let Err(e) = channel_store.lock().await.export_json(STORE_PATH).await {
                     error!("Failed to save id store to file: {}", e);
@@ -88,10 +90,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
         }
     });
-
-    tokio::spawn(async move {
-        
-    })
 
     match start_webserver(store.clone()).await {
         Ok(()) => {}
