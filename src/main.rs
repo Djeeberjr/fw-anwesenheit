@@ -70,6 +70,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let store: Arc<Mutex<IDStore>> = Arc::new(Mutex::new(raw_store));
 
+    let mut gpio_buzzer = buzzer::GPIOBuzzer::new(4)?;
+
     let channel_store = store.clone();
     tokio::spawn(async move {
         while let Some(tally_id_string) = rx.recv().await {
@@ -79,8 +81,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .add_id(id_store::TallyID(tally_id_string))
             {
                 info!("Added new id to current day");
-                buzzer::beep_ack().await;
                 // led.set_named_color_time(NamedColor::Green, 1); //led is green for 1 sec
+                gpio_buzzer.beep_ack().await;
 
                 if let Err(e) = channel_store.lock().await.export_json(STORE_PATH).await {
                     error!("Failed to save id store to file: {}", e);
