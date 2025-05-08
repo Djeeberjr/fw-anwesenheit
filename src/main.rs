@@ -1,8 +1,9 @@
 use buzzer::GPIOBuzzer;
-use color::NamedColor;
 use id_store::IDStore;
-use log::{LevelFilter, error, info, warn};
+use led::Led;
+use log::{LevelFilter, debug, error, info, warn};
 use pm3::run_pm3;
+use rppal::pwm::Channel;
 use simplelog::{ConfigBuilder, SimpleLogger};
 use std::{env, error::Error, sync::Arc};
 use tokio::{
@@ -20,7 +21,7 @@ mod pm3;
 mod webserver;
 
 const STORE_PATH: &str = "./data.json";
-const BUZZER_PIN: u8 = 26;
+const PWM_CHANNEL_BUZZER: Channel = Channel::Pwm0; //PWM0 = GPIO18/Physical pin 12
 
 fn setup_logger() {
     let log_level = env::var("LOG_LEVEL")
@@ -70,8 +71,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         IDStore::new()
     };
 
+    debug!("created store sucessfully");
+
     let store: Arc<Mutex<IDStore>> = Arc::new(Mutex::new(raw_store));
-    let gpio_buzzer: Arc<Mutex<GPIOBuzzer>> = Arc::new(Mutex::new(buzzer::GPIOBuzzer::new(BUZZER_PIN)?));
+    let gpio_buzzer: Arc<Mutex<GPIOBuzzer>> =
+        Arc::new(Mutex::new(GPIOBuzzer::new(PWM_CHANNEL_BUZZER)?));
+    let status_led: Arc<Mutex<Led>> = Arc::new(Mutex::new(Led::new()?));
 
     let channel_store = store.clone();
     tokio::spawn(async move {
@@ -82,13 +87,31 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .add_id(id_store::TallyID(tally_id_string))
             {
                 info!("Added new id to current day");
-                // led.set_named_color_time(NamedColor::Green, 1); //led is green for 1 sec
-                gpio_buzzer.lock().await.beep_ack().await;
+                status_led
+                    .lock()
+                    .await
+                    .turn_green_on_1s()
+                    .await
+                    .unwrap_or_else(|e| {
+                        error!("Failed to blink LED {}", e);
+                    });
+
+                gpio_buzzer
+                    .lock()
+                    .await
+                    .beep_ack()
+                    .await
+                    .unwrap_or_else(|e| error!("Failed to beep Ack {}", e));
 
                 if let Err(e) = channel_store.lock().await.export_json(STORE_PATH).await {
                     error!("Failed to save id store to file: {}", e);
                     // TODO: How to handle a failure to save ?
-                    gpio_buzzer.lock().await.beep_nak().await;
+                    gpio_buzzer
+                        .lock()
+                        .await
+                        .beep_nak()
+                        .await
+                        .unwrap_or_else(|e| error!("Failed to beep Nack {}", e));
                 }
             }
         }

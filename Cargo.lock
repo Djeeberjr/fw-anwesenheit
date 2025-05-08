@@ -423,6 +423,7 @@ dependencies = [
  "gpio",
  "log",
  "regex",
+ "rgb",
  "rocket",
  "rppal",
  "rust-embed",

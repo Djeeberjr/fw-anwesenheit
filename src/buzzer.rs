@@ -1,56 +1,61 @@
-use rppal::gpio::{Gpio, OutputPin};
-use std::{error::Error, time};
+use rppal::pwm::{Pwm, Channel, Polarity};
 use tokio::time::sleep;
+use std::{error::Error, time::Duration};
 
 pub struct GPIOBuzzer {
-    pin: OutputPin,
+    pwm: Pwm,
 }
 
 impl GPIOBuzzer {
-    pub fn new(pin_num: u8) -> Result<Self, Box<dyn Error>> {
-        let gpio = Gpio::new()?;
-        let pin = gpio.get(pin_num)?.into_output();
+    /// Create a new GPIOBuzzer instance.
+    /// 0.5 duty cyle 
+    /// # Arguments
+    /// * "channel" - PWM channel for buzzer PWM0 = GPIO 12 / PWM1 = GPIO 13
+    pub fn new(channel: Channel) -> Result<Self, Box<dyn Error>> {
+        // Enable with dummy values; we'll set frequency/duty in the tone method
+        let duty_cycle:f64 = 0.5;
+        let pwm = Pwm::with_frequency(channel, 1000.0, duty_cycle, Polarity::Normal, true)?;
+        pwm.disable()?; // Start disabled
 
-        Ok(GPIOBuzzer { pin })
+        Ok(GPIOBuzzer { pwm })
     }
 
-    /// Emits a sound on a passive buzzer.
-    async fn modulated_tone(&mut self, carrier_hz: u32, sound_hz: u32, duration_ms: u64) {
-        let carrier_period =
-            time::Duration::from_micros((1_000_000.0 / carrier_hz as f64 / 2.0) as u64);
-        let mod_period = 1_000.0 / sound_hz as f64; // in ms
-        let total_cycles = duration_ms as f64 / mod_period;
-
-        for _ in 0..total_cycles as u64 {
-            // Modulation on: Carrier on for mod_period / 2
-            let cycles_on = (carrier_hz as f64 * (mod_period / 2.0) / 1000.0) as u64;
-            for _ in 0..cycles_on {
-                self.pin.set_high();
-                sleep(carrier_period).await;
-                self.pin.set_low();
-                sleep(carrier_period).await;
-            }
-
-            // Modulation off: Carrier on for mod_period / 2
-            let pause = time::Duration::from_millis((mod_period / 2.0) as u64);
-            sleep(pause).await;
-        }
-    }
-    pub async fn beep_ack(&mut self) {
-        // carrier  = 2300 Hz, sound = 440 Hz, duration = 1 sec
-        self.modulated_tone(2300, 659, 400).await;
-        self.modulated_tone(2300, 784,100).await;
+        /// Play a tone using hardware PWM on supported GPIO pins.
+    ///
+    /// # Arguments
+    /// * `frequency` - Frequency in Hz.
+    /// * `duration_ms` - Duration in milliseconds.
+    async fn modulated_tone(&mut self, frequency: f64, duration_ms: u64) -> Result<(), Box<dyn Error>> {
+        self.pwm.set_frequency(frequency, 0.5)?; // 50% duty cycle (square wave)
+        self.pwm.enable()?;
+        sleep(Duration::from_millis(duration_ms)).await;
+        self.pwm.disable()?;
+        Ok(())
     }
 
-    pub async fn beep_nak(&mut self) {
-        // carrier  = 2300 Hz, sound = 440 Hz, duration = 1 sec
-        self.modulated_tone(2300, 659, 400).await;
-        self.modulated_tone(2300, 523, 100).await;
+    pub async fn beep_ack(&mut self) -> Result<(), Box<dyn Error>>{
+        let sleep_ms: u64 = 100;
+        self.modulated_tone(750.0, 100).await?;
+        sleep(Duration::from_millis(sleep_ms)).await;
+        self.modulated_tone(1200.0,100).await?;
+        sleep(Duration::from_millis(sleep_ms)).await;
+        self.modulated_tone(2300.0,100).await?;
+        Ok(())
     }
 
-    pub async fn beep_unnkown(&mut self) {
-        self.modulated_tone(2300, 784, 150).await;
-        self.modulated_tone(2300, 659, 150).await;
-        self.modulated_tone(2300, 500, 150).await;
+    pub async fn beep_nak(&mut self) -> Result<(), Box<dyn Error>>{
+        self.modulated_tone(2300.0,100).await?;
+        self.modulated_tone(2300.0,100).await?;
+        Ok(())
+    }
+
+    pub async fn beep_unnkown(&mut self) -> Result<(), Box<dyn Error>>{
+        let sleep_ms: u64 = 100;
+        self.modulated_tone(2300.0,100).await?;
+        sleep(Duration::from_millis(sleep_ms)).await;
+        self.modulated_tone(2300.0,100).await?;
+        sleep(Duration::from_millis(sleep_ms)).await;
+        self.modulated_tone(2300.0,100).await?;
+        Ok(())
     }
 }

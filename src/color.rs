@@ -15,9 +15,9 @@ pub enum NamedColor {
 impl Into<Rgb<u8>> for NamedColor {
     fn into(self) -> Rgb<u8> {
         match self {
-            NamedColor::Red => Rgb { r: 255, g: 0, b: 0 },
-            NamedColor::Green => Rgb { r: 0, g: 255, b: 0 },
-            NamedColor::Blue => Rgb { r: 0, g: 0, b: 255 },
+            NamedColor::Red => Rgb { r: 150, g: 0, b: 0 },
+            NamedColor::Green => Rgb { r: 0, g: 150, b: 0 },
+            NamedColor::Blue => Rgb { r: 0, g: 0, b: 150 },
             NamedColor::White => Rgb {
                 r: 255,
                 g: 255,
