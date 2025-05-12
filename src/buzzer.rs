@@ -34,26 +34,29 @@ impl GPIOBuzzer {
     }
 
     pub async fn beep_ack(&mut self) -> Result<(), Box<dyn Error>>{
-        let sleep_ms: u64 = 100;
-        self.modulated_tone(750.0, 100).await?;
+        let sleep_ms: u64 = 10;
+
+        self.modulated_tone(1200.0, 100).await?;
         sleep(Duration::from_millis(sleep_ms)).await;
-        self.modulated_tone(1200.0,100).await?;
-        sleep(Duration::from_millis(sleep_ms)).await;
-        self.modulated_tone(2300.0,100).await?;
+        self.modulated_tone(2000.0,50).await?;
         Ok(())
     }
 
     pub async fn beep_nak(&mut self) -> Result<(), Box<dyn Error>>{
-        self.modulated_tone(2300.0,100).await?;
-        self.modulated_tone(2300.0,100).await?;
+        let sleep_ms: u64 = 100;
+
+        self.modulated_tone(600.0, 150).await?;
+        sleep(Duration::from_millis(sleep_ms)).await;
+        self.modulated_tone(600.0,150).await?;
         Ok(())
     }
 
     pub async fn beep_unnkown(&mut self) -> Result<(), Box<dyn Error>>{
         let sleep_ms: u64 = 100;
-        self.modulated_tone(2300.0,100).await?;
+
+        self.modulated_tone(750.0, 100).await?;
         sleep(Duration::from_millis(sleep_ms)).await;
-        self.modulated_tone(2300.0,100).await?;
+        self.modulated_tone(1200.0,100).await?;
         sleep(Duration::from_millis(sleep_ms)).await;
         self.modulated_tone(2300.0,100).await?;
         Ok(())
