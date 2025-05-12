@@ -2,19 +2,10 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
     error::Error,
-    fmt::Display,
 };
 use tokio::fs;
 
-/// Represents the ID that is stored on the Tally
-#[derive(PartialEq, Eq, Deserialize, Serialize, Hash, Clone, PartialOrd, Ord)]
-pub struct TallyID(pub String);
-
-impl Display for TallyID {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
+use crate::tally_id::TallyID;
 
 /// Represents a single day that IDs can attend
 #[derive(Deserialize, Serialize)]

@@ -1,11 +1,12 @@
 use buzzer::GPIOBuzzer;
-use id_store::{IDStore, TallyID};
+use id_store::IDStore;
 use led::Led;
 use log::{LevelFilter, debug, error, info, warn};
 use pm3::run_pm3;
 use rppal::pwm::Channel;
 use simplelog::{ConfigBuilder, SimpleLogger};
 use std::{env, error::Error, sync::Arc};
+use tally_id::TallyID;
 use tokio::{
     fs,
     sync::{Mutex, mpsc},
@@ -19,6 +20,7 @@ mod id_store;
 mod led;
 mod parser;
 mod pm3;
+mod tally_id;
 mod webserver;
 
 const STORE_PATH: &str = "./data.json";
@@ -92,7 +94,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let channel_store = store.clone();
     tokio::spawn(async move {
         while let Some(tally_id_string) = rx.recv().await {
-            let tally_id = id_store::TallyID(tally_id_string);
+            let tally_id = TallyID(tally_id_string);
 
             if hotspot_ids.contains(&tally_id) {
                 info!("Enableing hotspot");
