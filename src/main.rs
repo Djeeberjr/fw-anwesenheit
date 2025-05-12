@@ -14,6 +14,7 @@ use webserver::start_webserver;
 
 mod buzzer;
 mod color;
+mod hotspot;
 mod id_store;
 mod led;
 mod parser;
@@ -87,6 +88,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .add_id(id_store::TallyID(tally_id_string))
             {
                 info!("Added new id to current day");
+
+                gpio_buzzer
+                    .lock()
+                    .await
+                    .beep_ack()
+                    .await
+                    .unwrap_or_else(|e| error!("Failed to beep Ack {}", e));
+
                 status_led
                     .lock()
                     .await
@@ -96,12 +105,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         error!("Failed to blink LED {}", e);
                     });
 
-                gpio_buzzer
-                    .lock()
-                    .await
-                    .beep_ack()
-                    .await
-                    .unwrap_or_else(|e| error!("Failed to beep Ack {}", e));
+                //TODO Hotspot command
 
                 if let Err(e) = channel_store.lock().await.export_json(STORE_PATH).await {
                     error!("Failed to save id store to file: {}", e);
@@ -112,6 +116,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         .beep_nak()
                         .await
                         .unwrap_or_else(|e| error!("Failed to beep Nack {}", e));
+
+                    //TODO: Error routine
+                    status_led
+                        .lock()
+                        .await
+                        .turn_red_on_1s()
+                        .await
+                        .unwrap_or_else(|e| {
+                            error!("Failed to blink LED {}", e);
+                        });
                 }
             }
         }
