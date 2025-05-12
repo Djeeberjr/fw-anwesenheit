@@ -1,6 +1,6 @@
-use rppal::pwm::{Pwm, Channel, Polarity};
+use rppal::pwm::{Channel, Error, Polarity, Pwm};
 use tokio::time::sleep;
-use std::{error::Error, time::Duration};
+use std::time::Duration;
 
 pub struct GPIOBuzzer {
     pwm: Pwm,
@@ -11,7 +11,7 @@ impl GPIOBuzzer {
     /// 0.5 duty cyle 
     /// # Arguments
     /// * "channel" - PWM channel for buzzer PWM0 = GPIO 12 / PWM1 = GPIO 13
-    pub fn new(channel: Channel) -> Result<Self, Box<dyn Error>> {
+    pub fn new(channel: Channel) -> Result<Self, Error> {
         // Enable with dummy values; we'll set frequency/duty in the tone method
         let duty_cycle:f64 = 0.5;
         let pwm = Pwm::with_frequency(channel, 1000.0, duty_cycle, Polarity::Normal, true)?;
@@ -25,7 +25,7 @@ impl GPIOBuzzer {
     /// # Arguments
     /// * `frequency` - Frequency in Hz.
     /// * `duration_ms` - Duration in milliseconds.
-    async fn modulated_tone(&mut self, frequency: f64, duration_ms: u64) -> Result<(), Box<dyn Error>> {
+    async fn modulated_tone(&mut self, frequency: f64, duration_ms: u64) -> Result<(), Error> {
         self.pwm.set_frequency(frequency, 0.5)?; // 50% duty cycle (square wave)
         self.pwm.enable()?;
         sleep(Duration::from_millis(duration_ms)).await;
@@ -33,7 +33,7 @@ impl GPIOBuzzer {
         Ok(())
     }
 
-    pub async fn beep_ack(&mut self) -> Result<(), Box<dyn Error>>{
+    pub async fn beep_ack(&mut self) -> Result<(), Error>{
         let sleep_ms: u64 = 10;
 
         self.modulated_tone(1200.0, 100).await?;
@@ -42,7 +42,7 @@ impl GPIOBuzzer {
         Ok(())
     }
 
-    pub async fn beep_nak(&mut self) -> Result<(), Box<dyn Error>>{
+    pub async fn beep_nak(&mut self) -> Result<(), Error>{
         let sleep_ms: u64 = 100;
 
         self.modulated_tone(600.0, 150).await?;
@@ -51,7 +51,7 @@ impl GPIOBuzzer {
         Ok(())
     }
 
-    pub async fn beep_unnkown(&mut self) -> Result<(), Box<dyn Error>>{
+    pub async fn beep_unnkown(&mut self) -> Result<(), Error>{
         let sleep_ms: u64 = 100;
 
         self.modulated_tone(750.0, 100).await?;
