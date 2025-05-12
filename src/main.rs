@@ -1,5 +1,5 @@
 use buzzer::GPIOBuzzer;
-use id_store::IDStore;
+use id_store::{IDStore, TallyID};
 use led::Led;
 use log::{LevelFilter, debug, error, info, warn};
 use pm3::run_pm3;
@@ -79,14 +79,30 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Arc::new(Mutex::new(GPIOBuzzer::new(PWM_CHANNEL_BUZZER)?));
     let status_led: Arc<Mutex<Led>> = Arc::new(Mutex::new(Led::new()?));
 
+    let hotspot_ids: Vec<TallyID> = env::var("HOTSPOT_IDS")
+        .map(|ids| ids.split(";").map(|id| TallyID(id.to_owned())).collect())
+        .unwrap_or_default();
+
+    if hotspot_ids.is_empty() {
+        warn!(
+            "HOTSPOT_IDS is not set or empty. You will not be able to activate the hotspot via a tally!"
+        );
+    }
+
     let channel_store = store.clone();
     tokio::spawn(async move {
         while let Some(tally_id_string) = rx.recv().await {
-            if channel_store
-                .lock()
-                .await
-                .add_id(id_store::TallyID(tally_id_string))
-            {
+            let tally_id = id_store::TallyID(tally_id_string);
+
+            if hotspot_ids.contains(&tally_id) {
+                info!("Enableing hotspot");
+                hotspot::enable_hotspot().await.unwrap_or_else(|err| {
+                    error!("Hotspot: {err}");
+                });
+                // TODO: Should the ID be added anyway or ignored ?
+            }
+
+            if channel_store.lock().await.add_id(tally_id) {
                 info!("Added new id to current day");
 
                 gpio_buzzer
@@ -104,8 +120,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     .unwrap_or_else(|e| {
                         error!("Failed to blink LED {}", e);
                     });
-
-                //TODO Hotspot command
 
                 if let Err(e) = channel_store.lock().await.export_json(STORE_PATH).await {
                     error!("Failed to save id store to file: {}", e);
