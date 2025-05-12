@@ -8,7 +8,7 @@ use simplelog::{ConfigBuilder, SimpleLogger};
 use std::{env, error::Error, sync::Arc};
 use tally_id::TallyID;
 use tokio::{
-    fs,
+    fs, join,
     sync::{Mutex, mpsc},
 };
 use webserver::start_webserver;
@@ -47,13 +47,45 @@ fn setup_logger() {
     let _ = SimpleLogger::init(log_level, config);
 }
 
+/// Signal the user success via buzzer and led
+async fn feedback_success(gpio_buzzer: &Arc<Mutex<GPIOBuzzer>>, status_led: &Arc<Mutex<Led>>) {
+    let mut buzzer_guard = gpio_buzzer.lock().await;
+    let mut led_guard = status_led.lock().await;
+
+    let (buzz, led) = join!(buzzer_guard.beep_ack(), led_guard.turn_green_on_1s());
+
+    buzz.unwrap_or_else(|err| {
+        error!("Failed to buzz: {err}");
+    });
+
+    led.unwrap_or_else(|err| {
+        error!("Failed to set LED: {err}");
+    });
+}
+
+/// Signal the user failure via buzzer and led
+async fn feedback_failure(gpio_buzzer: &Arc<Mutex<GPIOBuzzer>>, status_led: &Arc<Mutex<Led>>) {
+    let mut buzzer_guard = gpio_buzzer.lock().await;
+    let mut led_guard = status_led.lock().await;
+
+    let (buzz, led) = join!(buzzer_guard.beep_nak(), led_guard.turn_red_on_1s());
+
+    buzz.unwrap_or_else(|err| {
+        error!("Failed to buzz: {err}");
+    });
+
+    led.unwrap_or_else(|err| {
+        error!("Failed to set LED: {err}");
+    });
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
     info!("Starting application");
 
-    let (tx, mut rx) = mpsc::channel::<String>(1);
+    let (tx, mut rx) = mpsc::channel::<String>(32);
 
     tokio::spawn(async move {
         match run_pm3(tx).await {
@@ -61,7 +93,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 warn!("PM3 exited with a zero exit code");
             }
             Err(e) => {
-                error!("Failed to run PM3: {}", e);
+                error!("Failed to run PM3: {e}");
             }
         }
     });
@@ -107,41 +139,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
             if channel_store.lock().await.add_id(tally_id) {
                 info!("Added new id to current day");
 
-                gpio_buzzer
-                    .lock()
-                    .await
-                    .beep_ack()
-                    .await
-                    .unwrap_or_else(|e| error!("Failed to beep Ack {}", e));
-
-                status_led
-                    .lock()
-                    .await
-                    .turn_green_on_1s()
-                    .await
-                    .unwrap_or_else(|e| {
-                        error!("Failed to blink LED {}", e);
-                    });
+                feedback_success(&gpio_buzzer, &status_led).await;
 
                 if let Err(e) = channel_store.lock().await.export_json(STORE_PATH).await {
-                    error!("Failed to save id store to file: {}", e);
+                    error!("Failed to save id store to file: {e}");
+                    feedback_failure(&gpio_buzzer, &status_led).await;
                     // TODO: How to handle a failure to save ?
-                    gpio_buzzer
-                        .lock()
-                        .await
-                        .beep_nak()
-                        .await
-                        .unwrap_or_else(|e| error!("Failed to beep Nack {}", e));
-
-                    //TODO: Error routine
-                    status_led
-                        .lock()
-                        .await
-                        .turn_red_on_1s()
-                        .await
-                        .unwrap_or_else(|e| {
-                            error!("Failed to blink LED {}", e);
-                        });
                 }
             }
         }
@@ -150,7 +153,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     match start_webserver(store.clone()).await {
         Ok(()) => {}
         Err(e) => {
-            error!("Failed to start webserver: {}", e);
+            error!("Failed to start webserver: {e}");
         }
     }
 
