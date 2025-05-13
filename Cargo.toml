@@ -3,6 +3,10 @@ name = "fw-anwesenheit"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = []
+mock_pi = [] # Enable mocking of the rpi hardware 
+
 [dependencies]
 chrono = { version = "0.4.40", features = ["serde"] }
 gpio = "0.4.1"

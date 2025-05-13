@@ -1,6 +1,7 @@
-use buzzer::GPIOBuzzer;
+use buzzer::{Buzzer, GPIOBuzzer};
+use hotspot::{Hotspot, HotspotError, NMHotspot};
 use id_store::IDStore;
-use led::Led;
+use led::{SpiLed, StatusLed};
 use log::{LevelFilter, debug, error, info, warn};
 use pm3::run_pm3;
 use rppal::pwm::Channel;
@@ -13,11 +14,15 @@ use tokio::{
 };
 use webserver::start_webserver;
 
+#[cfg(feature = "mock_pi")]
+use mock::{MockBuzzer, MockHotspot, MockLed};
+
 mod buzzer;
 mod color;
 mod hotspot;
 mod id_store;
 mod led;
+mod mock;
 mod parser;
 mod pm3;
 mod tally_id;
@@ -48,7 +53,10 @@ fn setup_logger() {
 }
 
 /// Signal the user success via buzzer and led
-async fn feedback_success(gpio_buzzer: &Arc<Mutex<GPIOBuzzer>>, status_led: &Arc<Mutex<Led>>) {
+async fn feedback_success<T: Buzzer, I: StatusLed>(
+    gpio_buzzer: &Arc<Mutex<T>>,
+    status_led: &Arc<Mutex<I>>,
+) {
     let mut buzzer_guard = gpio_buzzer.lock().await;
     let mut led_guard = status_led.lock().await;
 
@@ -64,7 +72,10 @@ async fn feedback_success(gpio_buzzer: &Arc<Mutex<GPIOBuzzer>>, status_led: &Arc
 }
 
 /// Signal the user failure via buzzer and led
-async fn feedback_failure(gpio_buzzer: &Arc<Mutex<GPIOBuzzer>>, status_led: &Arc<Mutex<Led>>) {
+async fn feedback_failure<T: Buzzer, I: StatusLed>(
+    gpio_buzzer: &Arc<Mutex<T>>,
+    status_led: &Arc<Mutex<I>>,
+) {
     let mut buzzer_guard = gpio_buzzer.lock().await;
     let mut led_guard = status_led.lock().await;
 
@@ -77,6 +88,48 @@ async fn feedback_failure(gpio_buzzer: &Arc<Mutex<GPIOBuzzer>>, status_led: &Arc
     led.unwrap_or_else(|err| {
         error!("Failed to set LED: {err}");
     });
+}
+
+/// Create a buzzer
+/// Respects the `mock_pi` flag.
+fn create_buzzer() -> Result<Arc<Mutex<impl Buzzer>>, rppal::pwm::Error> {
+    #[cfg(feature = "mock_pi")]
+    {
+        Ok(Arc::new(Mutex::new(MockBuzzer {})))
+    }
+
+    #[cfg(not(feature = "mock_pi"))]
+    {
+        Ok(Arc::new(Mutex::new(GPIOBuzzer::new(PWM_CHANNEL_BUZZER)?)))
+    }
+}
+
+/// Creates a status led.
+/// Respects the `mock_pi` flag.
+fn create_status_led() -> Result<Arc<Mutex<impl StatusLed>>, rppal::spi::Error> {
+    #[cfg(feature = "mock_pi")]
+    {
+        Ok(Arc::new(Mutex::new(MockLed {})))
+    }
+
+    #[cfg(not(feature = "mock_pi"))]
+    {
+        Ok(Arc::new(Mutex::new(SpiLed::new()?)))
+    }
+}
+
+/// Create a struct to manage the hotspot
+/// Respects the `mock_pi` flag.
+fn create_hotspot() -> Result<impl Hotspot, HotspotError> {
+    #[cfg(feature = "mock_pi")]
+    {
+        Ok(MockHotspot {})
+    }
+
+    #[cfg(not(feature = "mock_pi"))]
+    {
+        NMHotspot::new_from_env()
+    }
 }
 
 #[tokio::main]
@@ -109,9 +162,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     debug!("created store sucessfully");
 
     let store: Arc<Mutex<IDStore>> = Arc::new(Mutex::new(raw_store));
-    let gpio_buzzer: Arc<Mutex<GPIOBuzzer>> =
-        Arc::new(Mutex::new(GPIOBuzzer::new(PWM_CHANNEL_BUZZER)?));
-    let status_led: Arc<Mutex<Led>> = Arc::new(Mutex::new(Led::new()?));
+    let gpio_buzzer = create_buzzer()?;
+    let status_led = create_status_led()?;
+    let hotspot = create_hotspot()?;
 
     let hotspot_ids: Vec<TallyID> = env::var("HOTSPOT_IDS")
         .map(|ids| ids.split(";").map(|id| TallyID(id.to_owned())).collect())
@@ -130,7 +183,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
             if hotspot_ids.contains(&tally_id) {
                 info!("Enableing hotspot");
-                hotspot::enable_hotspot().await.unwrap_or_else(|err| {
+                hotspot.enable_hotspot().await.unwrap_or_else(|err| {
                     error!("Hotspot: {err}");
                 });
                 // TODO: Should the ID be added anyway or ignored ?
