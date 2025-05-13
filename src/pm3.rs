@@ -24,6 +24,8 @@ pub async fn run_pm3(tx: mpsc::Sender<String>) -> Result<(), Box<dyn Error>> {
         .arg("-c")
         .arg("lf hitag reader -@")
         .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .stdin(Stdio::null())
         .spawn()?;
 
     let stdout = cmd.stdout.take().ok_or("Failed to get stdout")?;
@@ -31,7 +33,7 @@ pub async fn run_pm3(tx: mpsc::Sender<String>) -> Result<(), Box<dyn Error>> {
     let mut reader = BufReader::new(stdout).lines();
 
     while let Some(line) = reader.next_line().await? {
-        trace!("PM3: {}", line);
+        trace!("PM3: {line}");
         if let Some(uid) = super::parser::parse_line(&line) {
             tx.send(uid).await?;
         }
