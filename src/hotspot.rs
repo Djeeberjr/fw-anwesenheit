@@ -8,7 +8,7 @@ use tokio::process::Command;
 
 const SSID: &str = "fwa";
 const CON_NAME: &str = "fwa-hotspot";
-const PASSWORD: &str = "hunter22";
+const PASSWORD: &str = "a9LG2kUVrsRRVUo1";
 const IPV4_ADDRES: &str = "192.168.4.1/24";
 
 #[derive(Debug)]

@@ -15,3 +15,6 @@ Environment variables:
 - `LOG_LEVEL`: Can be set to either "debug","warn","error","trace" or "info". Defaults to "warn" in production.
 - `HTTP_PORT`: What port to listen on. Defaults to 80.
 - `HOTSPOT_IDS`: A semicolon seperated list of ids to activate the hotspot with e.g. `578B5DF2;c1532b57`.
+- `HOTSPOT_SSID`: Set the hotspot ssid. Defaults to "fwa".
+- `HOTSPOT_PW`: Set the hotspot password. Default to "a9LG2kUVrsRRVUo1". Recommended to change.
+
