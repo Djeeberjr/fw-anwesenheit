@@ -1,4 +1,4 @@
-export interface IdMapping {
+export interface IDMapping {
   id_map: IDMap
 }
 
@@ -9,19 +9,6 @@ export interface IDMap {
 export interface Name {
   first: string,
   last: string,
-}
-
-export async function requestMappings(): Promise<IdMapping> {
-  let req = await fetch("/api/mapping");
-
-  if (req.status != 200) {
-    console.error(await req.text());
-    return { id_map: {} };
-  }
-
-  let mappings: IdMapping = await req.json();
-
-  return mappings;
 }
 
 export async function addMapping(id: string, firstName: string, lastName: string) {
@@ -39,7 +26,7 @@ export async function addMapping(id: string, firstName: string, lastName: string
     })
   });
 
-  if (req.status != 200){
+  if (req.status != 200) {
     console.error(await req.text())
   }
 }

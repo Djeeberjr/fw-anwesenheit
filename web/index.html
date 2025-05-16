@@ -1,40 +1,17 @@
 <!doctype html>
 <html lang="de">
-
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link rel="shortcut icon" href="/favicon.ico" />
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-  <link rel="manifest" href="/site.webmanifest" />
-  <title>Anwesenheit</title>
-</head>
-
-<body class="bg-gradient-to-br from-blue-100 to-indigo-200 min-h-screen flex flex-col items-center justify-start py-10">
-  <script type="module" src="/src/main.ts"></script>
-  <div class="text-center space-y-6 mb-10">
-    <h1 class="text-3xl sm:text-4xl font-bold text-gray-800">
-      Anwesenheit
-  </div>
-  <a class="px-6 py-3 text-lg font-semibold text-white bg-indigo-600 rounded-2xl shadow-md hover:bg-indigo-700 transition"
-    href="/api/csv" download="anwesenheit.csv">
-    Download CSV
-  </a>
-  </div>
-  <div class="pt-6">
-    <h2 class="ID" >ID mapping</h2>
-
-    <table id="mappingTable">
-      <tr>
-        <th>ID</th>
-        <th>Nachname</th>
-        <th>Vorname</th>
-      </tr>
-
-    </table>
-  </div>
-</body>
-
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <title>Anwesenheit</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
 </html>
