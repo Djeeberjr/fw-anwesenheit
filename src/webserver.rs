@@ -1,19 +1,31 @@
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
+use rocket::data::FromData;
 use rocket::http::Status;
-use rocket::{Config, State};
+use rocket::serde::json::Json;
+use rocket::{Config, State, post};
 use rocket::{get, http::ContentType, response::content::RawHtml, routes};
 use rust_embed::Embed;
+use serde::Deserialize;
 use std::borrow::Cow;
 use std::env;
 use std::ffi::OsStr;
 use std::sync::Arc;
+use std::time::Instant;
 use tokio::sync::Mutex;
 
+use crate::id_mapping::{IDMapping, Name};
 use crate::id_store::IDStore;
+use crate::tally_id::TallyID;
 
 #[derive(Embed)]
 #[folder = "web/dist"]
 struct Asset;
+
+#[derive(Deserialize)]
+struct NewMapping {
+    id: String,
+    name: Name,
+}
 
 pub async fn start_webserver(store: Arc<Mutex<IDStore>>) -> Result<(), rocket::Error> {
     let port = match env::var("HTTP_PORT") {
@@ -31,7 +43,10 @@ pub async fn start_webserver(store: Arc<Mutex<IDStore>>) -> Result<(), rocket::E
     };
 
     rocket::custom(config)
-        .mount("/", routes![static_files, index, export_csv])
+        .mount(
+            "/",
+            routes![static_files, index, export_csv, get_mapping, add_mapping],
+        )
         .manage(store)
         .launch()
         .await?;
@@ -63,8 +78,22 @@ async fn export_csv(manager: &State<Arc<Mutex<IDStore>>>) -> Result<String, Stat
     match manager.lock().await.export_csv() {
         Ok(csv) => Ok(csv),
         Err(e) => {
-            error!("Failed to generate csv: {}", e);
+            error!("Failed to generate csv: {e}");
             Err(Status::InternalServerError)
         }
     }
+}
+
+#[get("/api/mapping")]
+async fn get_mapping(store: &State<Arc<Mutex<IDStore>>>) -> Json<IDMapping> {
+    Json(store.lock().await.mapping.clone())
+}
+
+#[post("/api/mapping", format = "json", data = "<new_mapping>")]
+async fn add_mapping(store: &State<Arc<Mutex<IDStore>>>, new_mapping: Json<NewMapping>) {
+    store
+        .lock()
+        .await
+        .mapping
+        .add_mapping(TallyID(new_mapping.id.clone()), new_mapping.name.clone());
 }
