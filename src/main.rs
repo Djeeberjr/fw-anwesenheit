@@ -27,6 +27,7 @@ mod parser;
 mod pm3;
 mod tally_id;
 mod webserver;
+mod id_mapping;
 
 const STORE_PATH: &str = "./data.json";
 const PWM_CHANNEL_BUZZER: Channel = Channel::Pwm0; //PWM0 = GPIO18/Physical pin 12

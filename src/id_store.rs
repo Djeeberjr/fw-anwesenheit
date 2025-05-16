@@ -5,7 +5,7 @@ use std::{
 };
 use tokio::fs;
 
-use crate::tally_id::TallyID;
+use crate::{id_mapping::IDMapping, tally_id::TallyID};
 
 /// Represents a single day that IDs can attend
 #[derive(Deserialize, Serialize)]
@@ -18,12 +18,14 @@ pub struct AttendanceDay {
 #[derive(Deserialize, Serialize)]
 pub struct IDStore {
     days: HashMap<String, AttendanceDay>,
+    pub mapping: IDMapping,
 }
 
 impl IDStore {
     pub fn new() -> Self {
         IDStore {
             days: HashMap::new(),
+            mapping: IDMapping::new(),
         }
     }
 
@@ -82,7 +84,7 @@ impl IDStore {
         days.sort();
 
         let header = days.join(seperator);
-        csv.push_str(&format!("ID{}{}\n", seperator, header));
+        csv.push_str(&format!("ID{seperator}{header}\n"));
 
         for user_id in user_ids.iter() {
             csv.push_str(&user_id.0.to_string());
@@ -95,7 +97,7 @@ impl IDStore {
                     .contains(user_id);
 
                 if was_there {
-                    csv.push_str(&format!("{}x", seperator));
+                    csv.push_str(&format!("{seperator}x"));
                 } else {
                     csv.push_str(seperator);
                 }
