@@ -1,6 +1,6 @@
-use log::{debug, error, info, warn};
-use rocket::data::FromData;
+use log::{error, info, warn};
 use rocket::http::Status;
+use rocket::response::stream::{Event, EventStream};
 use rocket::serde::json::Json;
 use rocket::{Config, State, post};
 use rocket::{get, http::ContentType, response::content::RawHtml, routes};
@@ -10,8 +10,8 @@ use std::borrow::Cow;
 use std::env;
 use std::ffi::OsStr;
 use std::sync::Arc;
-use std::time::Instant;
 use tokio::sync::Mutex;
+use tokio::sync::broadcast::Sender;
 
 use crate::id_mapping::{IDMapping, Name};
 use crate::id_store::IDStore;
@@ -27,7 +27,10 @@ struct NewMapping {
     name: Name,
 }
 
-pub async fn start_webserver(store: Arc<Mutex<IDStore>>) -> Result<(), rocket::Error> {
+pub async fn start_webserver(
+    store: Arc<Mutex<IDStore>>,
+    sse_broadcaster: Sender<String>,
+) -> Result<(), rocket::Error> {
     let port = match env::var("HTTP_PORT") {
         Ok(port) => port.parse().unwrap_or_else(|_| {
             warn!("Failed to parse HTTP_PORT. Using default 80");
@@ -45,9 +48,17 @@ pub async fn start_webserver(store: Arc<Mutex<IDStore>>) -> Result<(), rocket::E
     rocket::custom(config)
         .mount(
             "/",
-            routes![static_files, index, export_csv, get_mapping, add_mapping],
+            routes![
+                static_files,
+                index,
+                export_csv,
+                id_event,
+                get_mapping,
+                add_mapping
+            ],
         )
         .manage(store)
+        .manage(sse_broadcaster)
         .launch()
         .await?;
     Ok(())
@@ -70,6 +81,19 @@ fn static_files(file: std::path::PathBuf) -> Option<(ContentType, Vec<u8>)> {
         .unwrap_or(ContentType::Bytes);
 
     Some((content_type, asset.data.into_owned()))
+}
+
+#[get("/api/idevent")]
+fn id_event(sse_broadcaster: &State<Sender<String>>) -> EventStream![] {
+    let mut rx = sse_broadcaster.subscribe();
+    EventStream! {
+        loop {
+            let msg = rx.recv().await;
+            if let Ok(id) = msg {
+                yield Event::data(id);
+            }
+        }
+    }
 }
 
 #[get("/api/csv")]

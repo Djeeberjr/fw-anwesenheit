@@ -10,7 +10,7 @@ use std::{env, error::Error, sync::Arc};
 use tally_id::TallyID;
 use tokio::{
     fs, join,
-    sync::{Mutex, mpsc},
+    sync::{Mutex, broadcast, mpsc},
 };
 use webserver::start_webserver;
 
@@ -20,6 +20,7 @@ use mock::{MockBuzzer, MockHotspot, MockLed};
 mod buzzer;
 mod color;
 mod hotspot;
+mod id_mapping;
 mod id_store;
 mod led;
 mod mock;
@@ -27,7 +28,6 @@ mod parser;
 mod pm3;
 mod tally_id;
 mod webserver;
-mod id_mapping;
 
 const STORE_PATH: &str = "./data.json";
 const PWM_CHANNEL_BUZZER: Channel = Channel::Pwm0; //PWM0 = GPIO18/Physical pin 12
@@ -139,7 +139,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     info!("Starting application");
 
-    let (tx, mut rx) = mpsc::channel::<String>(32);
+    let (tx, mut rx) = broadcast::channel::<String>(32);
+    let sse_tx = tx.clone();
 
     tokio::spawn(async move {
         match run_pm3(tx).await {
@@ -179,7 +180,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let channel_store = store.clone();
     tokio::spawn(async move {
-        while let Some(tally_id_string) = rx.recv().await {
+        while let Ok(tally_id_string) = rx.recv().await {
             let tally_id = TallyID(tally_id_string);
 
             if hotspot_ids.contains(&tally_id) {
@@ -204,7 +205,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
     });
 
-    match start_webserver(store.clone()).await {
+    match start_webserver(store.clone(), sse_tx).await {
         Ok(()) => {}
         Err(e) => {
             error!("Failed to start webserver: {e}");
