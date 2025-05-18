@@ -1,5 +1,17 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import IDTable from "./lib/IDTable.svelte";
+  import LastId from "./lib/LastID.svelte";
+
+  let lastID: string = $state("");
+
+  onMount(() => {
+    let sse = new EventSource("/api/idevent");
+
+    sse.onmessage = (e) => {
+      lastID = e.data;
+    };
+  });
 </script>
 
 <main
@@ -17,7 +29,15 @@
     Download CSV
   </a>
 
-  <div class="py-3">
+  <div class="pt-3 pb-2">
+    <LastId
+      id={lastID}
+      onAdd={(id) => {
+        console.debug("Add id " + id);
+      }}
+    />
+  </div>
+  <div>
     <IDTable />
   </div>
 </main>
