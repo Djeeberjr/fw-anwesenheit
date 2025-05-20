@@ -2,8 +2,12 @@
   import { onMount } from "svelte";
   import IDTable from "./lib/IDTable.svelte";
   import LastId from "./lib/LastID.svelte";
+  import AddIDModal from "./lib/AddIDModal.svelte";
 
   let lastID: string = $state("");
+
+  let addModal: AddIDModal;
+  let idTable: IDTable;
 
   onMount(() => {
     let sse = new EventSource("/api/idevent");
@@ -33,11 +37,18 @@
     <LastId
       id={lastID}
       onAdd={(id) => {
-        console.debug("Add id " + id);
+        addModal.open(id);
       }}
     />
   </div>
   <div>
-    <IDTable />
+    <IDTable bind:this={idTable} />
   </div>
+
+  <AddIDModal
+    bind:this={addModal}
+    onSubmitted={() => {
+      idTable.reloadData();
+    }}
+  />
 </main>
