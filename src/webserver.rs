@@ -114,10 +114,19 @@ async fn get_mapping(store: &State<Arc<Mutex<IDStore>>>) -> Json<IDMapping> {
 }
 
 #[post("/api/mapping", format = "json", data = "<new_mapping>")]
-async fn add_mapping(store: &State<Arc<Mutex<IDStore>>>, new_mapping: Json<NewMapping>) {
+async fn add_mapping(store: &State<Arc<Mutex<IDStore>>>, new_mapping: Json<NewMapping>) -> Status {
+    if new_mapping.id.is_empty()
+        || new_mapping.name.first.is_empty()
+        || new_mapping.name.last.is_empty()
+    {
+        return Status::BadRequest;
+    }
+
     store
         .lock()
         .await
         .mapping
         .add_mapping(TallyID(new_mapping.id.clone()), new_mapping.name.clone());
+
+    Status::Created
 }
