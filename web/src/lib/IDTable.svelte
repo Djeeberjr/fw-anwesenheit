@@ -3,6 +3,12 @@
   import type { IDMapping } from "./IDMapping";
   let data: IDMapping | undefined = $state();
 
+  export async function reloadData() {
+    let res = await fetch("/api/mapping");
+
+    data = await res.json();
+  }
+
   let rows = $derived(
     data
       ? Object.entries(data.id_map).map(([id, value]) => ({
@@ -37,10 +43,9 @@
   }
 
   onMount(async () => {
-    let res = await fetch("/api/mapping");
-
-    data = await res.json();
+    await reloadData();
   });
+
 </script>
 
 {#if data == null}
