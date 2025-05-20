@@ -84,10 +84,18 @@ impl IDStore {
         days.sort();
 
         let header = days.join(seperator);
-        csv.push_str(&format!("ID{seperator}{header}\n"));
+        csv.push_str(&format!(
+            "ID{seperator}Nachname{seperator}Vorname{seperator}{header}\n"
+        ));
 
         for user_id in user_ids.iter() {
-            csv.push_str(&user_id.0.to_string());
+            let id = &user_id.0.to_string();
+            let name = self.mapping.map(user_id);
+
+            let firstname = name.map(|e| e.first.clone()).unwrap_or("".to_owned());
+            let lastname = name.map(|e| e.last.clone()).unwrap_or("".to_owned());
+
+            csv.push_str(&format!("{id}{seperator}{lastname}{seperator}{firstname}"));
             for day in days.iter() {
                 let was_there: bool = self
                     .days
