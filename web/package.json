@@ -5,15 +5,20 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json"
   },
   "devDependencies": {
-    "typescript": "~5.7.2",
-    "vite": "^6.2.0"
+    "@sveltejs/vite-plugin-svelte": "^5.0.3",
+    "@tsconfig/svelte": "^5.0.4",
+    "svelte": "^5.28.1",
+    "svelte-check": "^4.1.6",
+    "typescript": "~5.8.3",
+    "vite": "^6.3.5"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.1.4",
-    "tailwindcss": "^4.1.4"
+    "@tailwindcss/vite": "^4.1.7",
+    "tailwindcss": "^4.1.7"
   }
 }

@@ -4,12 +4,12 @@ use std::error::Error;
 use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
-use tokio::sync::mpsc;
+use tokio::sync::broadcast;
 
 /// Runs the pm3 binary and monitors it's output
 /// The pm3 binary is ether set in the env var PM3_BIN or found in the path
 /// The ouput is parsed and send via the `tx` channel
-pub async fn run_pm3(tx: mpsc::Sender<String>) -> Result<(), Box<dyn Error>> {
+pub async fn run_pm3(tx: broadcast::Sender<String>) -> Result<(), Box<dyn Error>> {
     let pm3_path = match env::var("PM3_BIN") {
         Ok(path) => path,
         Err(_) => {
@@ -35,7 +35,7 @@ pub async fn run_pm3(tx: mpsc::Sender<String>) -> Result<(), Box<dyn Error>> {
     while let Some(line) = reader.next_line().await? {
         trace!("PM3: {line}");
         if let Some(uid) = super::parser::parse_line(&line) {
-            tx.send(uid).await?;
+            tx.send(uid)?;
         }
     }
 
