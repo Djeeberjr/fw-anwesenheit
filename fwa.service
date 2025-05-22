@@ -1,0 +1,24 @@
+[Unit]
+Description=Feuerwehr Anwesenheit Service
+Requires=local-fs.target
+After=local-fs.target
+StartLimitIntervalSec=500
+StartLimitBurst=5
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/fwa
+Restart=on-failure
+RestartSec=5
+User=root
+Group=root
+RuntimeDirectory=/var/lib/fwa
+
+Environment="PM3_BIN=/usr/local/bin/pm3/pm3"
+#Environment="LOG_LEVEL=warn"
+#Environment="HOTSPOT_IDS=578B5DF2;c1532b57"
+#Environment="HOTSPOT_SSID=fwa"
+#Environment="HOTSPOT_PW=a9LG2kUVrsRRVUo1"
+
+[Install]
+WantedBy=multi-user.target
