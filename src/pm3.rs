@@ -34,10 +34,15 @@ pub async fn run_pm3(tx: broadcast::Sender<String>) -> Result<(), Box<dyn Error>
 
     let mut reader = BufReader::new(stdout).lines();
 
+    let mut last_id: String = "".to_owned();
+
     while let Some(line) = reader.next_line().await? {
         trace!("PM3: {line}");
         if let Some(uid) = super::parser::parse_line(&line) {
-            tx.send(uid)?;
+            if last_id == uid {
+                tx.send(uid.clone())?;
+            }
+            last_id = uid.to_owned();
         }
     }
 
