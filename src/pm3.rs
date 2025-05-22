@@ -1,4 +1,4 @@
-use log::{info, trace};
+use log::{debug, info, trace, warn};
 use std::env;
 use std::error::Error;
 use std::process::Stdio;
@@ -10,6 +10,8 @@ use tokio::sync::broadcast;
 /// The pm3 binary is ether set in the env var PM3_BIN or found in the path
 /// The ouput is parsed and send via the `tx` channel
 pub async fn run_pm3(tx: broadcast::Sender<String>) -> Result<(), Box<dyn Error>> {
+    kill_orphans().await;
+
     let pm3_path = match env::var("PM3_BIN") {
         Ok(path) => path,
         Err(_) => {
@@ -45,5 +47,25 @@ pub async fn run_pm3(tx: broadcast::Sender<String>) -> Result<(), Box<dyn Error>
         Ok(())
     } else {
         Err("PM3 exited with a non zero exit code".into())
+    }
+}
+
+/// Kills any open pm3 instances
+/// Also funny name. hehehe.
+async fn kill_orphans() {
+    let kill_result = Command::new("pkill")
+        .arg("-KILL")
+        .arg("-x")
+        .arg("proxmark3")
+        .output()
+        .await;
+
+    match kill_result {
+        Ok(_) => {
+            debug!("Successfully killed orphaned pm3 instances");
+        }
+        Err(e) => {
+            warn!("Failed to kill pm3 orphans: {e} Continuing anyway");
+        }
     }
 }
