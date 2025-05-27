@@ -2,7 +2,7 @@ use log::{error, info, warn};
 use rocket::http::Status;
 use rocket::response::stream::{Event, EventStream};
 use rocket::serde::json::Json;
-use rocket::{Config, State, post};
+use rocket::{Config, Shutdown, State, post};
 use rocket::{get, http::ContentType, response::content::RawHtml, routes};
 use rust_embed::Embed;
 use serde::Deserialize;
@@ -10,6 +10,7 @@ use std::borrow::Cow;
 use std::env;
 use std::ffi::OsStr;
 use std::sync::Arc;
+use tokio::select;
 use tokio::sync::Mutex;
 use tokio::sync::broadcast::Sender;
 
@@ -84,13 +85,20 @@ fn static_files(file: std::path::PathBuf) -> Option<(ContentType, Vec<u8>)> {
 }
 
 #[get("/api/idevent")]
-fn id_event(sse_broadcaster: &State<Sender<String>>) -> EventStream![] {
+fn id_event(sse_broadcaster: &State<Sender<String>>, shutdown: Shutdown) -> EventStream![] {
     let mut rx = sse_broadcaster.subscribe();
     EventStream! {
         loop {
-            let msg = rx.recv().await;
-            if let Ok(id) = msg {
-                yield Event::data(id);
+            select! {
+                msg = rx.recv() => {
+                    if let Ok(id) = msg {
+                        yield Event::data(id);
+                    }
+                }
+                _ = &mut shutdown.clone() => {
+                    // Shutdown signal received, exit the loop
+                    break;
+                }
             }
         }
     }
