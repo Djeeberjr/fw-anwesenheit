@@ -2,8 +2,10 @@ use log::{debug, info, trace, warn};
 use std::env;
 use std::error::Error;
 use std::process::Stdio;
-use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
+use tokio::select;
+use tokio::signal::unix::{SignalKind, signal};
 use tokio::sync::broadcast;
 
 /// Runs the pm3 binary and monitors it's output
@@ -27,31 +29,43 @@ pub async fn run_pm3(tx: broadcast::Sender<String>) -> Result<(), Box<dyn Error>
         .arg("lf hitag reader -@")
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
-        .stdin(Stdio::null())
+        .stdin(Stdio::piped())
         .spawn()?;
 
     let stdout = cmd.stdout.take().ok_or("Failed to get stdout")?;
+    let mut stdin = cmd.stdin.take().ok_or("Failed to get stdin")?;
 
     let mut reader = BufReader::new(stdout).lines();
 
-    let mut last_id: String = "".to_owned();
+    let mut sigterm = signal(SignalKind::terminate())?;
 
-    while let Some(line) = reader.next_line().await? {
-        trace!("PM3: {line}");
-        if let Some(uid) = super::parser::parse_line(&line) {
-            if last_id == uid {
-                tx.send(uid.clone())?;
+    let child_handle = tokio::spawn(async move {
+        let mut last_id: String = "".to_owned();
+        while let Some(line) = reader.next_line().await.unwrap_or(None) {
+            trace!("PM3: {line}");
+            if let Some(uid) = super::parser::parse_line(&line) {
+                if last_id == uid {
+                    let _ = tx.send(uid.clone());
+                }
+                last_id = uid;
             }
-            last_id = uid.to_owned();
         }
-    }
+    });
+
+    select! {
+        _ = child_handle => {}
+        _ = sigterm.recv() => {
+            debug!("Graceful shutdown of PM3");
+            let _ = stdin.write_all(b"\n").await;
+            let _ = stdin.flush().await;
+        }
+    };
 
     let status = cmd.wait().await?;
-
     if status.success() {
         Ok(())
     } else {
-        Err("PM3 exited with a non zero exit code".into())
+        Err("PM3 exited with a non-zero exit code".into())
     }
 }
 
