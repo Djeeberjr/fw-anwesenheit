@@ -12,7 +12,7 @@ Restart=on-failure
 RestartSec=5
 User=root
 Group=root
-RuntimeDirectory=/var/lib/fwa
+WorkingDirectory=/var/lib/fwa
 
 Environment="PM3_BIN=/usr/local/bin/pm3/pm3"
 #Environment="LOG_LEVEL=warn"
