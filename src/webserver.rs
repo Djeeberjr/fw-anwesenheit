@@ -14,6 +14,7 @@ use tokio::select;
 use tokio::sync::Mutex;
 use tokio::sync::broadcast::Sender;
 
+use crate::activity_fairing::ActivityNotifier;
 use crate::id_mapping::{IDMapping, Name};
 use crate::id_store::IDStore;
 use crate::tally_id::TallyID;
@@ -31,6 +32,7 @@ struct NewMapping {
 pub async fn start_webserver(
     store: Arc<Mutex<IDStore>>,
     sse_broadcaster: Sender<String>,
+    fairing: ActivityNotifier,
 ) -> Result<(), rocket::Error> {
     let port = match env::var("HTTP_PORT") {
         Ok(port) => port.parse().unwrap_or_else(|_| {
@@ -47,6 +49,7 @@ pub async fn start_webserver(
     };
 
     rocket::custom(config)
+        .attach(fairing)
         .mount(
             "/",
             routes![

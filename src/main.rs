@@ -1,3 +1,4 @@
+use activity_fairing::{ActivityNotifier, spawn_idle_watcher};
 use buzzer::{Buzzer, GPIOBuzzer};
 use hotspot::{Hotspot, HotspotError, NMHotspot};
 use id_store::IDStore;
@@ -6,17 +7,21 @@ use log::{LevelFilter, debug, error, info, warn};
 use pm3::run_pm3;
 use rppal::pwm::Channel;
 use simplelog::{ConfigBuilder, SimpleLogger};
-use std::{env, error::Error, sync::Arc};
+use std::{env, error::Error, sync::Arc, time::Duration};
 use tally_id::TallyID;
 use tokio::{
     fs, join,
-    sync::{Mutex, broadcast, mpsc},
+    sync::{
+        Mutex,
+        broadcast::{self, Sender},
+    },
 };
 use webserver::start_webserver;
 
 #[cfg(feature = "mock_pi")]
 use mock::{MockBuzzer, MockHotspot, MockLed};
 
+mod activity_fairing;
 mod buzzer;
 mod color;
 mod hotspot;
@@ -133,6 +138,30 @@ fn create_hotspot() -> Result<impl Hotspot, HotspotError> {
     }
 }
 
+async fn run_webserver<H>(
+    store: Arc<Mutex<IDStore>>,
+    id_channel: Sender<String>,
+    hotspot: Arc<Mutex<H>>,
+) where
+    H: Hotspot + Send + Sync + 'static,
+{
+    let activity_channel = spawn_idle_watcher(Duration::from_secs(60 * 30), move || {
+        info!("No activity on webserver. Disabling hotspot");
+        let cloned_hotspot = hotspot.clone();
+        tokio::spawn(async move {
+            let _ = cloned_hotspot.lock().await.disable_hotspot().await;
+        });
+    });
+
+    let notifier = ActivityNotifier {
+        sender: activity_channel,
+    };
+
+    if let Err(e) = start_webserver(store, id_channel, notifier).await {
+        error!("Failed to start webserver: {e}");
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
@@ -166,7 +195,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let store: Arc<Mutex<IDStore>> = Arc::new(Mutex::new(raw_store));
     let gpio_buzzer = create_buzzer()?;
     let status_led = create_status_led()?;
-    let hotspot = create_hotspot()?;
+    let hotspot = Arc::new(Mutex::new(create_hotspot()?));
 
     let hotspot_ids: Vec<TallyID> = env::var("HOTSPOT_IDS")
         .map(|ids| ids.split(";").map(|id| TallyID(id.to_owned())).collect())
@@ -179,15 +208,21 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let channel_store = store.clone();
+    let channel_hotspot = hotspot.clone();
     tokio::spawn(async move {
         while let Ok(tally_id_string) = rx.recv().await {
             let tally_id = TallyID(tally_id_string);
 
             if hotspot_ids.contains(&tally_id) {
                 info!("Enableing hotspot");
-                hotspot.enable_hotspot().await.unwrap_or_else(|err| {
-                    error!("Hotspot: {err}");
-                });
+                channel_hotspot
+                    .lock()
+                    .await
+                    .enable_hotspot()
+                    .await
+                    .unwrap_or_else(|err| {
+                        error!("Hotspot: {err}");
+                    });
                 // TODO: Should the ID be added anyway or ignored ?
             }
 
@@ -205,12 +240,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
     });
 
-    match start_webserver(store.clone(), sse_tx).await {
-        Ok(()) => {}
-        Err(e) => {
-            error!("Failed to start webserver: {e}");
-        }
-    }
+    run_webserver(store.clone(), sse_tx, hotspot.clone()).await;
 
     Ok(())
 }
