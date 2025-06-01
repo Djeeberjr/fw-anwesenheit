@@ -46,7 +46,9 @@ pub trait Hotspot {
         &self,
     ) -> impl std::future::Future<Output = Result<(), HotspotError>> + std::marker::Send;
 
-    async fn disable_hotspot(&self) -> Result<(), HotspotError>;
+    fn disable_hotspot(
+        &self,
+    ) -> impl std::future::Future<Output = Result<(), HotspotError>> + std::marker::Send;
 }
 
 /// NetworkManager Hotspot
