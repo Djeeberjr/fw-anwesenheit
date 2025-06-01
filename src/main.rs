@@ -21,7 +21,6 @@ use mock::MockHotspot;
 
 mod activity_fairing;
 mod buzzer;
-mod color;
 mod feedback;
 mod hotspot;
 mod id_mapping;

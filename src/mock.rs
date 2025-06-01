@@ -1,17 +1,20 @@
+use std::time::Duration;
+
 use log::debug;
+use tokio::time::sleep;
 
 use crate::{buzzer::Buzzer, hotspot::Hotspot, led::StatusLed};
 
 pub struct MockBuzzer {}
 
 impl Buzzer for MockBuzzer {
-    async fn beep_ack(&mut self) -> Result<(), rppal::pwm::Error> {
-        debug!("Mockbuzzer: ACK");
-        Ok(())
-    }
-
-    async fn beep_nak(&mut self) -> Result<(), rppal::pwm::Error> {
-        debug!("Mockbuzzer: NAK");
+    async fn modulated_tone(
+        &mut self,
+        frequency_hz: f64,
+        duration: Duration,
+    ) -> Result<(), rppal::pwm::Error> {
+        debug!("MockBuzzer: modulte tone: {frequency_hz} Hz");
+        sleep(duration).await;
         Ok(())
     }
 }
@@ -19,13 +22,13 @@ impl Buzzer for MockBuzzer {
 pub struct MockLed {}
 
 impl StatusLed for MockLed {
-    async fn turn_green_on_1s(&mut self) -> Result<(), rppal::spi::Error> {
-        debug!("Mockled: Turn LED green for 1 sec");
+    fn turn_off(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        debug!("Turn mock LED off");
         Ok(())
     }
 
-    async fn turn_red_on_1s(&mut self) -> Result<(), rppal::spi::Error> {
-        debug!("Mockled: Turn LED red for 1 sec");
+    fn turn_on(&mut self, color: rgb::RGB8) -> Result<(), Box<dyn std::error::Error>> {
+        debug!("Turn mock LED on to: {color}");
         Ok(())
     }
 }

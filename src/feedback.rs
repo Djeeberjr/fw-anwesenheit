@@ -1,7 +1,8 @@
 use log::error;
-use rppal::pwm::Channel;
-use std::error::Error;
-use tokio::join;
+use rgb::RGB8;
+use smart_leds::colors::{GREEN, RED};
+use std::{error::Error, time::Duration};
+use tokio::{join, time::sleep};
 
 use crate::{
     buzzer::{Buzzer, GPIOBuzzer},
@@ -11,7 +12,7 @@ use crate::{
 #[cfg(feature = "mock_pi")]
 use crate::mock::{MockBuzzer, MockLed};
 
-const PWM_CHANNEL_BUZZER: Channel = Channel::Pwm0; //PWM0 = GPIO18/Physical pin 12
+const LED_BLINK_DURATION: Duration = Duration::from_secs(1);
 
 pub struct Feedback<B: Buzzer, L: StatusLed> {
     buzzer: B,
@@ -20,28 +21,57 @@ pub struct Feedback<B: Buzzer, L: StatusLed> {
 
 impl<B: Buzzer, L: StatusLed> Feedback<B, L> {
     pub async fn success(&mut self) {
-        let (buzzer_result, led_result) =
-            join!(self.buzzer.beep_ack(), self.led.turn_green_on_1s());
+        let buzzer_handle = Self::beep_ack(&mut self.buzzer);
+        let led_handle = Self::blink_led_for_duration(&mut self.led, GREEN, LED_BLINK_DURATION);
+        let (buzzer_result, _) = join!(buzzer_handle, led_handle);
 
         buzzer_result.unwrap_or_else(|err| {
             error!("Failed to buzz: {err}");
-        });
-
-        led_result.unwrap_or_else(|err| {
-            error!("Failed to set LED: {err}");
         });
     }
 
     pub async fn failure(&mut self) {
-        let (buzzer_result, led_result) = join!(self.buzzer.beep_nak(), self.led.turn_red_on_1s());
+        let buzzer_handle = Self::beep_nak(&mut self.buzzer);
+        let led_handle = Self::blink_led_for_duration(&mut self.led, RED, LED_BLINK_DURATION);
+
+        let (buzzer_result, _) = join!(buzzer_handle, led_handle);
 
         buzzer_result.unwrap_or_else(|err| {
             error!("Failed to buzz: {err}");
         });
+    }
 
-        led_result.unwrap_or_else(|err| {
-            error!("Failed to set LED: {err}");
-        });
+    async fn blink_led_for_duration(
+        led: &mut L,
+        color: RGB8,
+        duration: Duration,
+    ) -> Result<(), Box<dyn Error>> {
+        led.turn_on(color)?;
+        sleep(duration).await;
+        led.turn_off()?;
+        Ok(())
+    }
+
+    async fn beep_ack(buzzer: &mut B) -> Result<(), Box<dyn Error>> {
+        buzzer
+            .modulated_tone(1200.0, Duration::from_millis(100))
+            .await?;
+        sleep(Duration::from_millis(10)).await;
+        buzzer
+            .modulated_tone(2000.0, Duration::from_millis(50))
+            .await?;
+        Ok(())
+    }
+
+    async fn beep_nak(buzzer: &mut B) -> Result<(), Box<dyn Error>> {
+        buzzer
+            .modulated_tone(600.0, Duration::from_millis(150))
+            .await?;
+        sleep(Duration::from_millis(100)).await;
+        buzzer
+            .modulated_tone(600.0, Duration::from_millis(150))
+            .await?;
+        Ok(())
     }
 }
 
@@ -62,7 +92,7 @@ impl FeedbackImpl {
         #[cfg(not(feature = "mock_pi"))]
         {
             Ok(Feedback {
-                buzzer: GPIOBuzzer::new(PWM_CHANNEL_BUZZER)?,
+                buzzer: GPIOBuzzer::new_default()?,
                 led: SpiLed::new()?,
             })
         }
