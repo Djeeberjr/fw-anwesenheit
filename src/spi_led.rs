@@ -1,6 +1,6 @@
+use anyhow::Result;
 use rppal::spi::{Bus, Mode, SlaveSelect, Spi};
 use smart_leds::SmartLedsWrite;
-use std::error::Error;
 use ws2812_spi::Ws2812;
 
 use crate::hardware::StatusLed;
@@ -20,13 +20,13 @@ impl SpiLed {
 }
 
 impl StatusLed for SpiLed {
-    fn turn_off(&mut self) -> Result<(), Box<dyn Error>> {
+    fn turn_off(&mut self) -> Result<()> {
         self.controller
             .write(vec![rgb::RGB8::new(0, 0, 0)].into_iter())?;
         Ok(())
     }
 
-    fn turn_on(&mut self, color: rgb::RGB8) -> Result<(), Box<dyn Error>> {
+    fn turn_on(&mut self, color: rgb::RGB8) -> Result<()> {
         self.controller.write(vec![color].into_iter())?;
         Ok(())
     }

@@ -6,7 +6,7 @@ use hardware::{Hotspot, create_hotspot};
 use id_store::IDStore;
 use log::{error, info, warn};
 use pm3::run_pm3;
-use std::{env, error::Error, sync::Arc, time::Duration};
+use std::{env, sync::Arc, time::Duration};
 use tally_id::TallyID;
 use tokio::{
     fs,
@@ -17,6 +17,7 @@ use tokio::{
     try_join,
 };
 use webserver::start_webserver;
+use anyhow::Result;
 
 mod activity_fairing;
 mod feedback;
@@ -39,7 +40,7 @@ async fn run_webserver<H>(
     store: Arc<Mutex<IDStore>>,
     id_channel: Sender<String>,
     hotspot: Arc<Mutex<H>>,
-) -> Result<(), Box<dyn Error>>
+) -> Result<()>
 where
     H: Hotspot + Send + Sync + 'static,
 {
@@ -59,7 +60,7 @@ where
     Ok(())
 }
 
-async fn load_or_create_store() -> Result<IDStore, Box<dyn Error>> {
+async fn load_or_create_store() -> Result<IDStore> {
     if fs::try_exists(STORE_PATH).await? {
         info!("Loading data from file");
         IDStore::new_from_json(STORE_PATH).await
@@ -89,7 +90,7 @@ async fn handle_ids_loop(
     id_store: Arc<Mutex<IDStore>>,
     hotspot: Arc<Mutex<impl Hotspot>>,
     mut user_feedback: FeedbackImpl,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<()> {
     while let Ok(tally_id_string) = id_channel.recv().await {
         let tally_id = TallyID(tally_id_string);
 
@@ -123,7 +124,7 @@ async fn handle_ids_loop(
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<()> {
     logger::setup_logger();
 
     info!("Starting application");

@@ -1,7 +1,8 @@
+use anyhow::Result;
 use log::error;
 use rgb::RGB8;
 use smart_leds::colors::{GREEN, RED};
-use std::{error::Error, time::Duration};
+use std::time::Duration;
 use tokio::{join, time::sleep};
 
 use crate::hardware::{Buzzer, StatusLed};
@@ -41,18 +42,14 @@ impl<B: Buzzer, L: StatusLed> Feedback<B, L> {
         });
     }
 
-    async fn blink_led_for_duration(
-        led: &mut L,
-        color: RGB8,
-        duration: Duration,
-    ) -> Result<(), Box<dyn Error>> {
+    async fn blink_led_for_duration(led: &mut L, color: RGB8, duration: Duration) -> Result<()> {
         led.turn_on(color)?;
         sleep(duration).await;
         led.turn_off()?;
         Ok(())
     }
 
-    async fn beep_ack(buzzer: &mut B) -> Result<(), Box<dyn Error>> {
+    async fn beep_ack(buzzer: &mut B) -> Result<()> {
         buzzer
             .modulated_tone(1200.0, Duration::from_millis(100))
             .await?;
@@ -63,7 +60,7 @@ impl<B: Buzzer, L: StatusLed> Feedback<B, L> {
         Ok(())
     }
 
-    async fn beep_nak(buzzer: &mut B) -> Result<(), Box<dyn Error>> {
+    async fn beep_nak(buzzer: &mut B) -> Result<()> {
         buzzer
             .modulated_tone(600.0, Duration::from_millis(150))
             .await?;
@@ -81,7 +78,7 @@ pub type FeedbackImpl = Feedback<MockBuzzer, MockLed>;
 pub type FeedbackImpl = Feedback<GPIOBuzzer, SpiLed>;
 
 impl FeedbackImpl {
-    pub fn new() -> Result<Self, Box<dyn Error>> {
+    pub fn new() -> Result<Self> {
         #[cfg(feature = "mock_pi")]
         {
             Ok(Feedback {

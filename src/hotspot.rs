@@ -1,9 +1,6 @@
-use log::{error, trace, warn};
-use std::{
-    env,
-    fmt::{self},
-    process::Output,
-};
+use anyhow::{Result, anyhow};
+use log::{trace, warn};
+use std::env;
 use tokio::process::Command;
 
 use crate::hardware::Hotspot;
@@ -12,36 +9,6 @@ const SSID: &str = "fwa";
 const CON_NAME: &str = "fwa-hotspot";
 const PASSWORD: &str = "a9LG2kUVrsRRVUo1";
 const IPV4_ADDRES: &str = "192.168.4.1/24";
-
-#[derive(Debug)]
-pub enum HotspotError {
-    IoError(std::io::Error),
-    NonZeroExit(Output),
-    PasswordToShort,
-}
-
-impl fmt::Display for HotspotError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            HotspotError::IoError(err) => {
-                write!(f, "Failed to run hotspot command. I/O error: {err}")
-            }
-            HotspotError::NonZeroExit(output) => {
-                let stdout = String::from_utf8_lossy(&output.stdout);
-                let stderr = String::from_utf8_lossy(&output.stderr);
-                write!(
-                    f,
-                    "Failed to run hotspot command.\nStdout: {stdout}\nStderr: {stderr}",
-                )
-            }
-            HotspotError::PasswordToShort => {
-                write!(f, "The password must be at leat 8 characters long")
-            }
-        }
-    }
-}
-
-impl std::error::Error for HotspotError {}
 
 /// NetworkManager Hotspot
 pub struct NMHotspot {
@@ -52,7 +19,7 @@ pub struct NMHotspot {
 }
 
 impl NMHotspot {
-    pub fn new_from_env() -> Result<Self, HotspotError> {
+    pub fn new_from_env() -> Result<Self> {
         let ssid = env::var("HOTSPOT_SSID").unwrap_or(SSID.to_owned());
         let password = env::var("HOTSPOT_PW").unwrap_or_else(|_| {
             warn!("HOTSPOT_PW not set. Using default password");
@@ -60,8 +27,7 @@ impl NMHotspot {
         });
 
         if password.len() < 8 {
-            error!("Hotspot PW is to short");
-            return Err(HotspotError::PasswordToShort);
+            return Err(anyhow!("Hotspot password to short"));
         }
 
         Ok(NMHotspot {
@@ -72,7 +38,7 @@ impl NMHotspot {
         })
     }
 
-    async fn create_hotspot(&self) -> Result<(), HotspotError> {
+    async fn create_hotspot(&self) -> Result<()> {
         let cmd = Command::new("nmcli")
             .args(["device", "wifi", "hotspot"])
             .arg("con-name")
@@ -82,14 +48,13 @@ impl NMHotspot {
             .arg("password")
             .arg(&self.password)
             .output()
-            .await
-            .map_err(HotspotError::IoError)?;
+            .await?;
 
         trace!("nmcli (std): {}", String::from_utf8_lossy(&cmd.stdout));
         trace!("nmcli (err): {}", String::from_utf8_lossy(&cmd.stderr));
 
         if !cmd.status.success() {
-            return Err(HotspotError::NonZeroExit(cmd));
+            return Err(anyhow!("nmcli command had non-zero exit code"));
         }
 
         let cmd = Command::new("nmcli")
@@ -101,24 +66,22 @@ impl NMHotspot {
             .arg("ipv4.addresses")
             .arg(&self.ipv4)
             .output()
-            .await
-            .map_err(HotspotError::IoError)?;
+            .await?;
 
         if !cmd.status.success() {
-            return Err(HotspotError::NonZeroExit(cmd));
+            return Err(anyhow!("nmcli command had non-zero exit code"));
         }
 
         Ok(())
     }
 
     /// Checks if the connection already exists
-    async fn exists(&self) -> Result<bool, HotspotError> {
+    async fn exists(&self) -> Result<bool> {
         let cmd = Command::new("nmcli")
             .args(["connection", "show"])
             .arg(&self.con_name)
             .output()
-            .await
-            .map_err(HotspotError::IoError)?;
+            .await?;
 
         trace!("nmcli (std): {}", String::from_utf8_lossy(&cmd.stdout));
         trace!("nmcli (err): {}", String::from_utf8_lossy(&cmd.stderr));
@@ -128,7 +91,7 @@ impl NMHotspot {
 }
 
 impl Hotspot for NMHotspot {
-    async fn enable_hotspot(&self) -> Result<(), HotspotError> {
+    async fn enable_hotspot(&self) -> Result<()> {
         if !self.exists().await? {
             self.create_hotspot().await?;
         }
@@ -137,32 +100,30 @@ impl Hotspot for NMHotspot {
             .args(["connection", "up"])
             .arg(&self.con_name)
             .output()
-            .await
-            .map_err(HotspotError::IoError)?;
+            .await?;
 
         trace!("nmcli (std): {}", String::from_utf8_lossy(&cmd.stdout));
         trace!("nmcli (err): {}", String::from_utf8_lossy(&cmd.stderr));
 
         if !cmd.status.success() {
-            return Err(HotspotError::NonZeroExit(cmd));
+            return Err(anyhow!("nmcli command had non-zero exit code"));
         }
 
         Ok(())
     }
 
-    async fn disable_hotspot(&self) -> Result<(), HotspotError> {
+    async fn disable_hotspot(&self) -> Result<()> {
         let cmd = Command::new("nmcli")
             .args(["connection", "down"])
             .arg(&self.con_name)
             .output()
-            .await
-            .map_err(HotspotError::IoError)?;
+            .await?;
 
         trace!("nmcli (std): {}", String::from_utf8_lossy(&cmd.stdout));
         trace!("nmcli (err): {}", String::from_utf8_lossy(&cmd.stderr));
 
         if !cmd.status.success() {
-            return Err(HotspotError::NonZeroExit(cmd));
+            return Err(anyhow!("nmcli command had non-zero exit code"));
         }
 
         Ok(())

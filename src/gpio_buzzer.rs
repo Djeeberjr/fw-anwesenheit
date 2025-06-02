@@ -1,5 +1,6 @@
+use anyhow::Result;
 use rppal::pwm::{Channel, Polarity, Pwm};
-use std::{error::Error, time::Duration};
+use std::time::Duration;
 use tokio::time::sleep;
 
 use crate::hardware::Buzzer;
@@ -26,11 +27,7 @@ impl GPIOBuzzer {
 }
 
 impl Buzzer for GPIOBuzzer {
-    async fn modulated_tone(
-        &mut self,
-        frequency_hz: f64,
-        duration: Duration,
-    ) -> Result<(), Box<dyn Error>> {
+    async fn modulated_tone(&mut self, frequency_hz: f64, duration: Duration) -> Result<()> {
         self.pwm.set_frequency(frequency_hz, 0.5)?; // 50% duty cycle (square wave)
         self.pwm.enable()?;
         sleep(duration).await;

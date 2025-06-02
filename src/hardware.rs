@@ -1,6 +1,5 @@
-use std::{error::Error, time::Duration};
-
-use crate::hotspot::{HotspotError};
+use anyhow::Result;
+use std::time::Duration;
 
 #[cfg(feature = "mock_pi")]
 use crate::mock::MockHotspot;
@@ -9,9 +8,9 @@ use crate::mock::MockHotspot;
 use crate::hotspot::NMHotspot;
 
 pub trait StatusLed {
-    fn turn_off(&mut self) -> Result<(), Box<dyn Error>>;
+    fn turn_off(&mut self) -> Result<()>;
 
-    fn turn_on(&mut self, color: rgb::RGB8) -> Result<(), Box<dyn Error>>;
+    fn turn_on(&mut self, color: rgb::RGB8) -> Result<()>;
 }
 
 pub trait Buzzer {
@@ -19,22 +18,18 @@ pub trait Buzzer {
         &mut self,
         frequency_hz: f64,
         duration: Duration,
-    ) -> impl Future<Output = Result<(), Box<dyn Error>>> + std::marker::Send;
+    ) -> impl Future<Output = Result<()>> + std::marker::Send;
 }
 
 pub trait Hotspot {
-    fn enable_hotspot(
-        &self,
-    ) -> impl std::future::Future<Output = Result<(), HotspotError>> + std::marker::Send;
+    fn enable_hotspot(&self) -> impl std::future::Future<Output = Result<()>> + std::marker::Send;
 
-    fn disable_hotspot(
-        &self,
-    ) -> impl std::future::Future<Output = Result<(), HotspotError>> + std::marker::Send;
+    fn disable_hotspot(&self) -> impl std::future::Future<Output = Result<()>> + std::marker::Send;
 }
 
 /// Create a struct to manage the hotspot
 /// Respects the `mock_pi` flag.
-pub fn create_hotspot() -> Result<impl Hotspot, HotspotError> {
+pub fn create_hotspot() -> Result<impl Hotspot> {
     #[cfg(feature = "mock_pi")]
     {
         Ok(MockHotspot {})

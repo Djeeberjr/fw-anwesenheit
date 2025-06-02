@@ -1,11 +1,8 @@
-use serde::{Deserialize, Serialize};
-use std::{
-    collections::{HashMap, HashSet},
-    error::Error,
-};
-use tokio::fs;
-
 use crate::{id_mapping::IDMapping, tally_id::TallyID};
+use anyhow::{Result, anyhow};
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
+use tokio::fs;
 
 /// Represents a single day that IDs can attend
 #[derive(Deserialize, Serialize)]
@@ -30,7 +27,7 @@ impl IDStore {
     }
 
     /// Creats a new `IDStore` from a json file
-    pub async fn new_from_json(filepath: &str) -> Result<Self, Box<dyn Error>> {
+    pub async fn new_from_json(filepath: &str) -> Result<Self> {
         let read_string = fs::read_to_string(filepath).await?;
         Ok(serde_json::from_str(&read_string)?)
     }
@@ -59,14 +56,14 @@ impl IDStore {
     }
 
     /// Writes the store to a json file
-    pub async fn export_json(&self, filepath: &str) -> Result<(), Box<dyn Error + Send + Sync>> {
+    pub async fn export_json(&self, filepath: &str) -> Result<()> {
         fs::write(filepath, serde_json::to_string(&self)?).await?;
         Ok(())
     }
 
     /// Export the store to a csv file.
     /// With days in the rows and IDs in the collum.
-    pub fn export_csv(&self) -> Result<String, Box<dyn Error>> {
+    pub fn export_csv(&self) -> Result<String> {
         let mut csv = String::new();
         let seperator = ";";
         let mut user_ids: HashSet<TallyID> = HashSet::new();
@@ -100,7 +97,7 @@ impl IDStore {
                 let was_there: bool = self
                     .days
                     .get(day)
-                    .ok_or("Failed to access day")?
+                    .ok_or(anyhow!("Failed to access day"))?
                     .ids
                     .contains(user_id);
 

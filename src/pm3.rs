@@ -1,6 +1,6 @@
+use anyhow::{Result, anyhow};
 use log::{debug, info, trace, warn};
 use std::env;
-use std::error::Error;
 use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
@@ -11,7 +11,7 @@ use tokio::sync::broadcast;
 /// Runs the pm3 binary and monitors it's output
 /// The pm3 binary is ether set in the env var PM3_BIN or found in the path
 /// The ouput is parsed and send via the `tx` channel
-pub async fn run_pm3(tx: broadcast::Sender<String>) -> Result<(), Box<dyn Error>> {
+pub async fn run_pm3(tx: broadcast::Sender<String>) -> Result<()> {
     kill_orphans().await;
 
     let pm3_path = match env::var("PM3_BIN") {
@@ -32,8 +32,8 @@ pub async fn run_pm3(tx: broadcast::Sender<String>) -> Result<(), Box<dyn Error>
         .stdin(Stdio::piped())
         .spawn()?;
 
-    let stdout = cmd.stdout.take().ok_or("Failed to get stdout")?;
-    let mut stdin = cmd.stdin.take().ok_or("Failed to get stdin")?;
+    let stdout = cmd.stdout.take().ok_or(anyhow!("Failed to get stdout"))?;
+    let mut stdin = cmd.stdin.take().ok_or(anyhow!("Failed to get stdin"))?;
 
     let mut reader = BufReader::new(stdout).lines();
 
@@ -65,7 +65,7 @@ pub async fn run_pm3(tx: broadcast::Sender<String>) -> Result<(), Box<dyn Error>
     if status.success() {
         Ok(())
     } else {
-        Err("PM3 exited with a non-zero exit code".into())
+        Err(anyhow!("PM3 exited with a non-zero exit code"))
     }
 }
 
