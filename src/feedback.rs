@@ -4,10 +4,10 @@ use smart_leds::colors::{GREEN, RED};
 use std::{error::Error, time::Duration};
 use tokio::{join, time::sleep};
 
-use crate::{
-    buzzer::{Buzzer, GPIOBuzzer},
-    led::{SpiLed, StatusLed},
-};
+use crate::hardware::{Buzzer, StatusLed};
+
+#[cfg(not(feature = "mock_pi"))]
+use crate::{gpio_buzzer::GPIOBuzzer, spi_led::SpiLed};
 
 #[cfg(feature = "mock_pi")]
 use crate::mock::{MockBuzzer, MockLed};

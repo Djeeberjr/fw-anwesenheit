@@ -6,6 +6,8 @@ use std::{
 };
 use tokio::process::Command;
 
+use crate::hardware::Hotspot;
+
 const SSID: &str = "fwa";
 const CON_NAME: &str = "fwa-hotspot";
 const PASSWORD: &str = "a9LG2kUVrsRRVUo1";
@@ -40,16 +42,6 @@ impl fmt::Display for HotspotError {
 }
 
 impl std::error::Error for HotspotError {}
-
-pub trait Hotspot {
-    fn enable_hotspot(
-        &self,
-    ) -> impl std::future::Future<Output = Result<(), HotspotError>> + std::marker::Send;
-
-    fn disable_hotspot(
-        &self,
-    ) -> impl std::future::Future<Output = Result<(), HotspotError>> + std::marker::Send;
-}
 
 /// NetworkManager Hotspot
 pub struct NMHotspot {

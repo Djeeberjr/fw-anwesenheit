@@ -1,9 +1,9 @@
-use std::time::Duration;
+use std::{error::Error, time::Duration};
 
 use log::debug;
 use tokio::time::sleep;
 
-use crate::{buzzer::Buzzer, hotspot::Hotspot, led::StatusLed};
+use crate::hardware::{Buzzer, Hotspot, StatusLed};
 
 pub struct MockBuzzer {}
 
@@ -12,7 +12,7 @@ impl Buzzer for MockBuzzer {
         &mut self,
         frequency_hz: f64,
         duration: Duration,
-    ) -> Result<(), rppal::pwm::Error> {
+    ) -> Result<(), Box<dyn Error>> {
         debug!("MockBuzzer: modulte tone: {frequency_hz} Hz");
         sleep(duration).await;
         Ok(())

@@ -3,13 +3,9 @@ use smart_leds::SmartLedsWrite;
 use std::error::Error;
 use ws2812_spi::Ws2812;
 
+use crate::hardware::StatusLed;
+
 const SPI_CLOCK_SPEED: u32 = 3_800_000;
-
-pub trait StatusLed {
-    fn turn_off(&mut self) -> Result<(), Box<dyn Error>>;
-
-    fn turn_on(&mut self, color: rgb::RGB8) -> Result<(), Box<dyn Error>>;
-}
 
 pub struct SpiLed {
     controller: Ws2812<Spi>,

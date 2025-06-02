@@ -1,6 +1,8 @@
+#![allow(dead_code)]
+
 use activity_fairing::{ActivityNotifier, spawn_idle_watcher};
 use feedback::{Feedback, FeedbackImpl};
-use hotspot::{Hotspot, HotspotError, NMHotspot};
+use hardware::{Hotspot, create_hotspot};
 use id_store::IDStore;
 use log::{error, info, warn};
 use pm3::run_pm3;
@@ -16,38 +18,22 @@ use tokio::{
 };
 use webserver::start_webserver;
 
-#[cfg(feature = "mock_pi")]
-use mock::MockHotspot;
-
 mod activity_fairing;
-mod buzzer;
 mod feedback;
+mod gpio_buzzer;
+mod hardware;
 mod hotspot;
 mod id_mapping;
 mod id_store;
-mod led;
 mod logger;
 mod mock;
 mod parser;
 mod pm3;
+mod spi_led;
 mod tally_id;
 mod webserver;
 
 const STORE_PATH: &str = "./data.json";
-
-/// Create a struct to manage the hotspot
-/// Respects the `mock_pi` flag.
-fn create_hotspot() -> Result<impl Hotspot, HotspotError> {
-    #[cfg(feature = "mock_pi")]
-    {
-        Ok(MockHotspot {})
-    }
-
-    #[cfg(not(feature = "mock_pi"))]
-    {
-        NMHotspot::new_from_env()
-    }
-}
 
 async fn run_webserver<H>(
     store: Arc<Mutex<IDStore>>,
