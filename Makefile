@@ -8,11 +8,13 @@ SERVICE_DIR := $(DEB_DIR)/lib/systemd/system
 CONFIG_DIR := $(DEB_DIR)/etc
 PM3_DIR := $(DEB_DIR)/usr/share/pm3
 
-.PHONY: all build clean package prepare_package binary
+.PHONY: all build clean package prepare_package
+	
+all: package
 
-all: build
+build: $(BUILD_DIR)/fwa 
 
-$(BUILD_DIR)/fwa: 
+$(BUILD_DIR)/fwa: web/dist
 	cross build --release --target arm-unknown-linux-gnueabihf
 	cp ./target/arm-unknown-linux-gnueabihf/release/fw-anwesenheit $@
 
@@ -33,6 +35,7 @@ $(BIN_DIR)/fwa: $(BUILD_DIR)/fwa
 	mkdir -p $(BIN_DIR)
 	cp $< $@
 
+
 $(DEB_DIR)/DEBIAN:
 	mkdir -p $(DEB_DIR)/DEBIAN
 	echo "Package: $(PACKAGE_NAME)" > $(DEB_DIR)/DEBIAN/control
@@ -44,9 +47,15 @@ $(DEB_DIR)/DEBIAN:
 	echo "Maintainer: Niklas Kapelle <niklas@kapelle.org>" >> $(DEB_DIR)/DEBIAN/control
 	echo "Description: Feuerwehr anwesenheit" >> $(DEB_DIR)/DEBIAN/control
 
+	echo "/etc/fwa.env" > $(DEB_DIR)/DEBIAN/conffiles
+
+web/dist:
+	(cd web && npm run build)
+
 package: prepare_package
 	dpkg-deb --build $(DEB_DIR)
 
 clean:
 	cargo clean
+	rm -rf web/dist
 	rm -rf $(BUILD_DIR)
