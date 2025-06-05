@@ -9,6 +9,10 @@ I²C fpr RTC `sudo raspi-config` -> interface -> enable I²C
 
 # Config 
 
+Flags:
+
+`--error` or `-e`: Enters error state. The LED turns red and the hotspot is activated. This state gets called from systemd if the service is in a failure state.
+
 Environment variables:
 
 - `PM3_BIN`: Path to the pm3 binary. Seach in path if not set. Can also be set to the `pm3_mock.sh` for testing.

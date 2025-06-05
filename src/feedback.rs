@@ -42,6 +42,12 @@ impl<B: Buzzer, L: StatusLed> Feedback<B, L> {
         });
     }
 
+    pub async fn activate_error_state(&mut self) -> Result<()> {
+        self.led.turn_on(RED)?;
+        Self::beep_nak(&mut self.buzzer).await?;
+        Ok(())
+    }
+
     async fn blink_led_for_duration(led: &mut L, color: RGB8, duration: Duration) -> Result<()> {
         led.turn_on(color)?;
         sleep(duration).await;

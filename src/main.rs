@@ -1,15 +1,21 @@
 #![allow(dead_code)]
 
 use activity_fairing::{ActivityNotifier, spawn_idle_watcher};
+use anyhow::Result;
 use feedback::{Feedback, FeedbackImpl};
 use hardware::{Hotspot, create_hotspot};
 use id_store::IDStore;
 use log::{error, info, warn};
 use pm3::run_pm3;
-use std::{env, sync::Arc, time::Duration};
+use std::{
+    env::{self, args},
+    sync::Arc,
+    time::Duration,
+};
 use tally_id::TallyID;
 use tokio::{
     fs,
+    signal::unix::{SignalKind, signal},
     sync::{
         Mutex,
         broadcast::{self, Receiver, Sender},
@@ -17,7 +23,6 @@ use tokio::{
     try_join,
 };
 use webserver::start_webserver;
-use anyhow::Result;
 
 mod activity_fairing;
 mod feedback;
@@ -123,19 +128,35 @@ async fn handle_ids_loop(
     Ok(())
 }
 
+async fn enter_error_state(mut feedback: FeedbackImpl, hotspot: Arc<Mutex<impl Hotspot>>) {
+    let _ = feedback.activate_error_state().await;
+    let _ = hotspot.lock().await.enable_hotspot().await;
+
+    let mut sigterm = signal(SignalKind::terminate()).unwrap();
+    sigterm.recv().await;
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     logger::setup_logger();
 
     info!("Starting application");
 
-    let (tx, rx) = broadcast::channel::<String>(32);
-    let sse_tx = tx.clone();
-
-    let store: Arc<Mutex<IDStore>> = Arc::new(Mutex::new(load_or_create_store().await?));
     let user_feedback = Feedback::new()?;
     let hotspot = Arc::new(Mutex::new(create_hotspot()?));
+
+    let error_flag_set = args().any(|e| e == "--error" || e == "-e");
+    if error_flag_set {
+        error!("Error flag set. Entering error state");
+        enter_error_state(user_feedback, hotspot).await;
+        return Ok(());
+    }
+
+    let store: Arc<Mutex<IDStore>> = Arc::new(Mutex::new(load_or_create_store().await?));
     let hotspot_enable_ids = get_hotspot_enable_ids();
+
+    let (tx, rx) = broadcast::channel::<String>(32);
+    let sse_tx = tx.clone();
 
     let pm3_handle = run_pm3(tx);
 
@@ -153,6 +174,7 @@ async fn main() -> Result<()> {
 
     if let Err(e) = run_result {
         error!("Failed to run application: {e}");
+        return Err(e);
     }
 
     Ok(())
