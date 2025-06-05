@@ -26,3 +26,7 @@ Systemd:
 
 The service is run as a systemd service. There are two service `fwa.service` and `fwa-fail.service`. They read their config 
 from a env file located at `/etc/fwa.env`. See example [env file](service/fwa.env).
+
+# Building
+
+Run `make package` to create `.deb` file. [Cross](https://github.com/cross-rs/cross) is used for building the rust code.
