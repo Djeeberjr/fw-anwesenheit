@@ -62,10 +62,15 @@ pub async fn run_pm3(tx: broadcast::Sender<String>) -> Result<()> {
     };
 
     let status = cmd.wait().await?;
-    if status.success() {
+
+    // We use the exit code here because status.success() is false if the child was terminated by a
+    // signal
+    let code = status.code().unwrap_or(0);
+
+    if code == 0 {
         Ok(())
     } else {
-        Err(anyhow!("PM3 exited with a non-zero exit code"))
+        Err(anyhow!("PM3 exited with a non-zero exit code: {code}"))
     }
 }
 
