@@ -4,6 +4,7 @@ Requires=local-fs.target
 After=local-fs.target
 StartLimitIntervalSec=500
 StartLimitBurst=5
+OnFailure= fwa-fail.service
 
 [Service]
 Type=simple
@@ -13,12 +14,7 @@ RestartSec=5
 User=root
 Group=root
 WorkingDirectory=/var/lib/fwa
-
-Environment="PM3_BIN=/usr/local/bin/pm3/pm3"
-#Environment="LOG_LEVEL=warn"
-#Environment="HOTSPOT_IDS=578B5DF2;c1532b57"
-#Environment="HOTSPOT_SSID=fwa"
-#Environment="HOTSPOT_PW=a9LG2kUVrsRRVUo1"
+EnvironmentFile=/etc/fwa.env
 
 [Install]
 WantedBy=multi-user.target
