@@ -27,7 +27,7 @@
     <button
       class="bg-indigo-500 rounded-2xl px-2 cursor-pointer mx-2"
       onclick={() => {
-        if (onAdd && id != "") {
+        if (onAdd) {
           onAdd(id);
         }
       }}>+</button
