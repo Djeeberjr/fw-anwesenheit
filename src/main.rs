@@ -7,6 +7,7 @@ use hardware::{Hotspot, create_hotspot};
 use id_store::IDStore;
 use log::{error, info, warn};
 use pm3::run_pm3;
+use smart_leds::colors::BLUE;
 use std::{
     env::{self, args},
     sync::Arc,
@@ -62,6 +63,10 @@ where
     };
 
     start_webserver(store, id_channel, notifier).await?;
+
+    feedback::CURRENTSTATUS = Hotspot;
+    FeedbackImpl::flash_led_for_duration(led, BLUE, 1000);
+    
     Ok(())
 }
 
@@ -171,11 +176,15 @@ async fn main() -> Result<()> {
     let webserver_handle = run_webserver(store.clone(), sse_tx, hotspot.clone());
 
     let run_result = try_join!(pm3_handle, loop_handle, webserver_handle);
+    
 
     if let Err(e) = run_result {
         error!("Failed to run application: {e}");
         return Err(e);
     }
+
+    feedback::CURRENTSTATUS = Ready;
+    FeedbackImpl::beep_startup(buzzer);
 
     Ok(())
 }
