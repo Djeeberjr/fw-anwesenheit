@@ -175,6 +175,10 @@ async fn main() -> Result<()> {
 
     let webserver_handle = run_webserver(store.clone(), sse_tx, hotspot.clone());
 
+    feedback::CURRENTSTATUS = Ready;
+    FeedbackImpl::beep_startup(buzzer);
+    FeedbackImpl::flash_led_for_duration(led, GREEN, Duration::from_secs(1));
+
     let run_result = try_join!(pm3_handle, loop_handle, webserver_handle);
     
 
@@ -182,9 +186,6 @@ async fn main() -> Result<()> {
         error!("Failed to run application: {e}");
         return Err(e);
     }
-
-    feedback::CURRENTSTATUS = Ready;
-    FeedbackImpl::beep_startup(buzzer);
 
     Ok(())
 }

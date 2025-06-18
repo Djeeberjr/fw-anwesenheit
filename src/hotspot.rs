@@ -1,7 +1,7 @@
 use anyhow::{Result, anyhow};
 use log::{trace, warn};
 use smart_leds::colors::GREEN;
-use std::env;
+use std::{env, time::Duration};
 use tokio::process::Command;
 
 use crate::{feedback::{self, FeedbackImpl}, hardware::Hotspot, spi_led};
@@ -128,7 +128,7 @@ impl Hotspot for NMHotspot {
         }
 
         feedback::CURRENTSTATUS = Ready;
-        FeedbackImpl::flash_led_for_duration(led, GREEN, 1000);
+        FeedbackImpl::flash_led_for_duration(led, GREEN, Duration::from_secs(1));
         
         Ok(())
     }
