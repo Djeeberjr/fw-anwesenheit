@@ -1,10 +1,9 @@
 use anyhow::{Result, anyhow};
 use log::{trace, warn};
-use smart_leds::colors::GREEN;
-use std::{env, time::Duration};
+use std::env;
 use tokio::process::Command;
 
-use crate::{feedback::{self, FeedbackImpl}, hardware::Hotspot, spi_led};
+use crate::hardware::Hotspot;
 
 const SSID: &str = "fwa";
 const CON_NAME: &str = "fwa-hotspot";
@@ -127,9 +126,6 @@ impl Hotspot for NMHotspot {
             return Err(anyhow!("nmcli command had non-zero exit code"));
         }
 
-        feedback::CURRENTSTATUS = Ready;
-        FeedbackImpl::flash_led_for_duration(led, GREEN, Duration::from_secs(1));
-        
         Ok(())
     }
 }

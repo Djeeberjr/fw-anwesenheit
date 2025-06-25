@@ -1,26 +1,11 @@
 use anyhow::Result;
-use rgb::RGB8;
 use rppal::spi::{Bus, Mode, SlaveSelect, Spi};
 use smart_leds::SmartLedsWrite;
 use ws2812_spi::Ws2812;
 
-use crate::{feedback, hardware::StatusLed};
+use crate::hardware::StatusLed;
 
 const SPI_CLOCK_SPEED: u32 = 3_800_000;
-
-pub enum CurrentStatus {
-    Ready,
-    Hotspot,
-}
-
-impl CurrentStatus {
-    pub fn color(&self) -> RGB8 {
-        match self {
-            CurrentStatus::Ready => RGB8::new(0, 50, 0),
-            CurrentStatus::Hotspot => RGB8::new(0, 0, 50),
-        }
-    }
-}
 
 pub struct SpiLed {
     controller: Ws2812<Spi>,
@@ -37,7 +22,7 @@ impl SpiLed {
 impl StatusLed for SpiLed {
     fn turn_off(&mut self) -> Result<()> {
         self.controller
-            .write(vec![feedback::CURRENTSTATUS.color()].into_iter())?;
+            .write(vec![rgb::RGB8::new(0, 0, 0)].into_iter())?;
         Ok(())
     }
 

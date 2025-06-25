@@ -7,7 +7,6 @@ use hardware::{Hotspot, create_hotspot};
 use id_store::IDStore;
 use log::{error, info, warn};
 use pm3::run_pm3;
-use smart_leds::colors::BLUE;
 use std::{
     env::{self, args},
     sync::Arc,
@@ -46,6 +45,7 @@ async fn run_webserver<H>(
     store: Arc<Mutex<IDStore>>,
     id_channel: Sender<String>,
     hotspot: Arc<Mutex<H>>,
+    user_feedback: Arc<Mutex<FeedbackImpl>>,
 ) -> Result<()>
 where
     H: Hotspot + Send + Sync + 'static,
@@ -53,8 +53,13 @@ where
     let activity_channel = spawn_idle_watcher(Duration::from_secs(60 * 30), move || {
         info!("No activity on webserver. Disabling hotspot");
         let cloned_hotspot = hotspot.clone();
+        let cloned_user_feedback = user_feedback.clone();
         tokio::spawn(async move {
             let _ = cloned_hotspot.lock().await.disable_hotspot().await;
+            cloned_user_feedback
+                .lock()
+                .await
+                .set_device_status(feedback::DeviceStatus::Ready);
         });
     });
 
@@ -64,9 +69,6 @@ where
 
     start_webserver(store, id_channel, notifier).await?;
 
-    feedback::CURRENTSTATUS = Hotspot;
-    FeedbackImpl::flash_led_for_duration(led, BLUE, 1000);
-    
     Ok(())
 }
 
@@ -99,32 +101,38 @@ async fn handle_ids_loop(
     hotspot_enable_ids: Vec<TallyID>,
     id_store: Arc<Mutex<IDStore>>,
     hotspot: Arc<Mutex<impl Hotspot>>,
-    mut user_feedback: FeedbackImpl,
+    user_feedback: Arc<Mutex<FeedbackImpl>>,
 ) -> Result<()> {
     while let Ok(tally_id_string) = id_channel.recv().await {
         let tally_id = TallyID(tally_id_string);
 
         if hotspot_enable_ids.contains(&tally_id) {
             info!("Enableing hotspot");
-            hotspot
-                .lock()
-                .await
-                .enable_hotspot()
-                .await
-                .unwrap_or_else(|err| {
-                    error!("Hotspot: {err}");
-                });
+            let hotspot_enable_result = hotspot.lock().await.enable_hotspot().await;
+
+            match hotspot_enable_result {
+                Ok(_) => {
+                    user_feedback
+                        .lock()
+                        .await
+                        .set_device_status(feedback::DeviceStatus::HotspotEnabled);
+                }
+                Err(e) => {
+                    error!("Hotspot: {e}");
+                }
+            }
+
             // TODO: Should the ID be added anyway or ignored ?
         }
 
         if id_store.lock().await.add_id(tally_id) {
             info!("Added new id to current day");
 
-            user_feedback.success().await;
+            user_feedback.lock().await.success().await;
 
             if let Err(e) = id_store.lock().await.export_json(STORE_PATH).await {
                 error!("Failed to save id store to file: {e}");
-                user_feedback.failure().await;
+                user_feedback.lock().await.failure().await;
                 // TODO: How to handle a failure to save ?
             }
         }
@@ -133,8 +141,8 @@ async fn handle_ids_loop(
     Ok(())
 }
 
-async fn enter_error_state(mut feedback: FeedbackImpl, hotspot: Arc<Mutex<impl Hotspot>>) {
-    let _ = feedback.activate_error_state().await;
+async fn enter_error_state(feedback: Arc<Mutex<FeedbackImpl>>, hotspot: Arc<Mutex<impl Hotspot>>) {
+    let _ = feedback.lock().await.activate_error_state().await;
     let _ = hotspot.lock().await.enable_hotspot().await;
 
     let mut sigterm = signal(SignalKind::terminate()).unwrap();
@@ -147,13 +155,13 @@ async fn main() -> Result<()> {
 
     info!("Starting application");
 
-    let user_feedback = Feedback::new()?;
+    let user_feedback = Arc::new(Mutex::new(Feedback::new()?));
     let hotspot = Arc::new(Mutex::new(create_hotspot()?));
 
     let error_flag_set = args().any(|e| e == "--error" || e == "-e");
     if error_flag_set {
         error!("Error flag set. Entering error state");
-        enter_error_state(user_feedback, hotspot).await;
+        enter_error_state(user_feedback.clone(), hotspot).await;
         return Ok(());
     }
 
@@ -165,22 +173,24 @@ async fn main() -> Result<()> {
 
     let pm3_handle = run_pm3(tx);
 
+    user_feedback.lock().await.startup().await;
+
     let loop_handle = handle_ids_loop(
         rx,
         hotspot_enable_ids,
         store.clone(),
         hotspot.clone(),
-        user_feedback,
+        user_feedback.clone(),
     );
 
-    let webserver_handle = run_webserver(store.clone(), sse_tx, hotspot.clone());
-
-    feedback::CURRENTSTATUS = Ready;
-    FeedbackImpl::beep_startup(buzzer);
-    FeedbackImpl::flash_led_for_duration(led, GREEN, Duration::from_secs(1));
+    let webserver_handle = run_webserver(
+        store.clone(),
+        sse_tx,
+        hotspot.clone(),
+        user_feedback.clone(),
+    );
 
     let run_result = try_join!(pm3_handle, loop_handle, webserver_handle);
-    
 
     if let Err(e) = run_result {
         error!("Failed to run application: {e}");
