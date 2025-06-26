@@ -42,7 +42,9 @@
     />
   </div>
   <div>
-    <IDTable bind:this={idTable} />
+    <IDTable bind:this={idTable} onEdit={(id,firstName,lastName)=>{
+      addModal.open(id,firstName,lastName);
+    }}/>
   </div>
 
   <AddIDModal

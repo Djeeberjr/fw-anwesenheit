@@ -9,8 +9,12 @@
 
   let modal: Modal;
 
-  export function open(id: string) {
-    displayID = id;
+  export function open(presetID: string, presetFirstName?: string, presetLastName?: string) {
+    displayID = presetID;
+
+    firstName = presetFirstName ?? "";
+    lastName = presetLastName ?? "";
+
     modal.open();
   }
 

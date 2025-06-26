@@ -3,6 +3,8 @@
   import type { IDMapping } from "./IDMapping";
   let data: IDMapping | undefined = $state();
 
+  let { onEdit }: { onEdit?: (string,string,string) => void } = $props();
+
   export async function reloadData() {
     let res = await fetch("/api/mapping");
 
@@ -82,6 +84,8 @@
 
             <span class="indicator">{indicator("first")}</span>
           </th>
+          <th>
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -90,6 +94,9 @@
             <td class="whitespace-nowrap pr-5 pl-2 py-1">{row.id}</td>
             <td class="whitespace-nowrap pr-5">{row.last}</td>
             <td class="whitespace-nowrap pr-5">{row.first}</td>
+            <td class="pr-5" ><button onclick={()=>{
+              onEdit && onEdit(row.id,row.first,row.last);
+            }} class="cursor-pointer">🔧</button></td>
           </tr>
         {/each}
       </tbody>
