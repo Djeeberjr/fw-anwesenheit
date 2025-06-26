@@ -8,10 +8,10 @@ use tokio::{join, time::sleep};
 use crate::hardware::{Buzzer, StatusLed};
 
 #[cfg(not(feature = "mock_pi"))]
-use crate::{gpio_buzzer::GPIOBuzzer, spi_led::SpiLed};
+use crate::{hardware::GPIOBuzzer, hardware::SpiLed};
 
 #[cfg(feature = "mock_pi")]
-use crate::mock::{MockBuzzer, MockLed};
+use crate::hardware::{MockBuzzer, MockLed};
 
 const LED_BLINK_DURATION: Duration = Duration::from_secs(1);
 

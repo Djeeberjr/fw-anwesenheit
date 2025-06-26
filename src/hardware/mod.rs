@@ -1,11 +1,14 @@
 use anyhow::Result;
 use std::time::Duration;
 
-#[cfg(feature = "mock_pi")]
-use crate::mock::MockHotspot;
+mod gpio_buzzer;
+mod hotspot;
+mod mock;
+mod spi_led;
 
-#[cfg(not(feature = "mock_pi"))]
-use crate::hotspot::NMHotspot;
+pub use gpio_buzzer::GPIOBuzzer;
+pub use mock::{MockBuzzer, MockHotspot, MockLed};
+pub use spi_led::SpiLed;
 
 pub trait StatusLed {
     fn turn_off(&mut self) -> Result<()>;
@@ -32,11 +35,11 @@ pub trait Hotspot {
 pub fn create_hotspot() -> Result<impl Hotspot> {
     #[cfg(feature = "mock_pi")]
     {
-        Ok(MockHotspot {})
+        Ok(mock::MockHotspot {})
     }
 
     #[cfg(not(feature = "mock_pi"))]
     {
-        NMHotspot::new_from_env()
+        hotspot::NMHotspot::new_from_env()
     }
 }

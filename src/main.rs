@@ -1,12 +1,8 @@
 #![allow(dead_code)]
 
-use activity_fairing::{ActivityNotifier, spawn_idle_watcher};
 use anyhow::Result;
 use feedback::{Feedback, FeedbackImpl};
-use hardware::{Hotspot, create_hotspot};
-use id_store::IDStore;
 use log::{error, info, warn};
-use pm3::run_pm3;
 use std::{
     env::{self, args},
     sync::Arc,
@@ -24,20 +20,15 @@ use tokio::{
 };
 use webserver::start_webserver;
 
-mod activity_fairing;
+use crate::{hardware::{create_hotspot, Hotspot}, pm3::run_pm3, store::IDStore, webserver::{spawn_idle_watcher, ActivityNotifier}};
+
 mod feedback;
-mod gpio_buzzer;
 mod hardware;
-mod hotspot;
-mod id_mapping;
-mod id_store;
-mod logger;
-mod mock;
-mod parser;
 mod pm3;
-mod spi_led;
+mod logger;
 mod tally_id;
 mod webserver;
+mod store;
 
 const STORE_PATH: &str = "./data.json";
 

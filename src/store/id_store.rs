@@ -1,8 +1,9 @@
-use crate::{id_mapping::IDMapping, tally_id::TallyID};
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use tokio::fs;
+
+use crate::{store::IDMapping, tally_id::TallyID};
 
 /// Represents a single day that IDs can attend
 #[derive(Deserialize, Serialize)]
