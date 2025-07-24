@@ -24,22 +24,3 @@ pub trait Buzzer {
     ) -> impl Future<Output = Result<()>> + std::marker::Send;
 }
 
-pub trait Hotspot {
-    fn enable_hotspot(&self) -> impl std::future::Future<Output = Result<()>> + std::marker::Send;
-
-    fn disable_hotspot(&self) -> impl std::future::Future<Output = Result<()>> + std::marker::Send;
-}
-
-/// Create a struct to manage the hotspot
-/// Respects the `mock_pi` flag.
-pub fn create_hotspot() -> Result<impl Hotspot> {
-    #[cfg(feature = "mock_pi")]
-    {
-        Ok(mock::MockHotspot {})
-    }
-
-    #[cfg(not(feature = "mock_pi"))]
-    {
-        hotspot::NMHotspot::new_from_env()
-    }
-}
