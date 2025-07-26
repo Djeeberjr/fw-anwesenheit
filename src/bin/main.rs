@@ -14,6 +14,7 @@ use crate::webserver::start_webserver;
 
 mod init;
 mod webserver;
+mod store;
 
 #[esp_hal_embassy::main]
 async fn main(mut spawner: Spawner) {
