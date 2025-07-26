@@ -426,6 +426,7 @@ dependencies = [
  "futures-sink",
  "futures-util",
  "heapless",
+ "log",
 ]
 
 [[package]]
@@ -974,6 +975,7 @@ dependencies = [
  "edge-nal-embassy",
  "embassy-executor",
  "embassy-net",
+ "embassy-sync 0.7.0",
  "embassy-time",
  "embedded-io",
  "embedded-io-async",
