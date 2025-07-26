@@ -73,7 +73,7 @@ async fn rfid_reader_task(mut uart_device: Uart<'static, Async>, chan: TallyPubl
         debug!("Looking for NFC...");
         match uart_device.read_async(&mut uart_buffer).await {
             Ok(n) => {
-                let mut hex_str = heapless::String::<128>::new();
+                let mut hex_str = heapless::String::<64>::new();
                 for byte in &uart_buffer[..n] {
                     core::fmt::Write::write_fmt(&mut hex_str, format_args!("{:02X} ", byte)).ok();
                 }

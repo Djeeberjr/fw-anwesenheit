@@ -1,11 +1,13 @@
 use embassy_executor::Spawner;
 use embassy_net::Stack;
-use esp_hal::peripherals::{GPIO1, GPIO2, UART1};
+use esp_hal::peripherals::{self, GPIO0, GPIO1, GPIO3, GPIO4, GPIO5, GPIO6, GPIO7, GPIO22, GPIO23, I2C0, UART1};
+use esp_hal::time::Rate;
 use esp_hal::{
     Async,
     clock::CpuClock,
     timer::{systimer::SystemTimer, timg::TimerGroup},
     uart::Uart,
+    i2c::master::I2c
 };
 use esp_println::logger::init_logger;
 use log::error;
@@ -39,22 +41,41 @@ pub async fn hardware_init(spawner: &mut Spawner) -> (Uart<'static, Async>, Stac
     let interfaces = wifi::setup_wifi(timer1.timer0, rng, peripherals.WIFI, spawner);
     let stack = network::setup_network(network_seed, interfaces.ap, spawner);
 
-    let uart_devie = setup_uart(peripherals.UART1, peripherals.GPIO1, peripherals.GPIO2);
+    let uart_device = setup_uart(peripherals.UART1, peripherals.GPIO7, peripherals.GPIO6);
 
-    (uart_devie, stack)
+    let i2c_device = setup_i2c(peripherals.I2C0, peripherals.GPIO22, peripherals.GPIO23);
+
+    (uart_device, stack)
+    
 }
 
 fn setup_uart(
     uart1: UART1<'static>,
-    gpio1: GPIO1<'static>,
-    gpio2: GPIO2<'static>,
+    uart_rx: GPIO7<'static>,
+    uart_tx: GPIO6<'static>,
 ) -> Uart<'static, Async> {
     let uard_device = Uart::new(uart1, esp_hal::uart::Config::default().with_baudrate(9600));
 
     match uard_device {
-        Ok(block) => block.with_rx(gpio1).with_tx(gpio2).into_async(),
+        Ok(block) => block.with_rx(uart_rx).with_tx(uart_tx).into_async(),
         Err(e) => {
             error!("Failed to initialize UART: {e}");
+            panic!();
+        }
+    }
+}
+
+fn setup_i2c(
+    i2c0: I2C0<'static>,
+    sda: GPIO22<'static>,
+    scl: GPIO23<'static>,
+) -> I2c<'static, Async> {
+    let config = esp_hal::i2c::master::Config::default().with_frequency(Rate::from_khz(400));
+    let i2c_device = I2c::new(i2c0, config);
+    match i2c_device {
+        Ok(block) => block.with_sda(sda).with_scl(scl).into_async(),
+        Err(e) => {
+            error!("Failed to initialize I2C: {e}");
             panic!();
         }
     }

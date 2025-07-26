@@ -60,6 +60,8 @@ edge-nal-embassy = { version = "0.6.0", features = ["log"] }
 picoserve = { version = "0.16.0", features = ["embassy", "log"] }
 embassy-sync = { version = "0.7.0", features = ["log"] }
 
+ds3231 = "0.3.0"
+
 
 [profile.dev]
 # Rust debug is too slow.
