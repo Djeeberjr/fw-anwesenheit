@@ -7,7 +7,8 @@ use esp_hal::{
     clock::CpuClock,
     timer::{systimer::SystemTimer, timg::TimerGroup},
     uart::Uart,
-    i2c::master::I2c
+    i2c::master::I2c,
+    gpio::{Output, OutputConfig}
 };
 use esp_println::logger::init_logger;
 use log::error;
@@ -41,12 +42,13 @@ pub async fn hardware_init(spawner: &mut Spawner) -> (Uart<'static, Async>, Stac
     let interfaces = wifi::setup_wifi(timer1.timer0, rng, peripherals.WIFI, spawner);
     let stack = network::setup_network(network_seed, interfaces.ap, spawner);
 
+    init_lvl_shifter(peripherals.GPIO0);
+
     let uart_device = setup_uart(peripherals.UART1, peripherals.GPIO7, peripherals.GPIO6);
 
     let i2c_device = setup_i2c(peripherals.I2C0, peripherals.GPIO22, peripherals.GPIO23);
 
     (uart_device, stack)
-    
 }
 
 fn setup_uart(
@@ -79,4 +81,11 @@ fn setup_i2c(
             panic!();
         }
     }
+}
+
+
+// Initialize the level shifter for the NFC reader and LED (output-enable (OE) input is low, all outputs are placed in the high-impedance (Hi-Z) state)
+fn init_lvl_shifter(oe_pin: GPIO0<'static>){
+    let mut oe_lvl_shifter = Output::new(oe_pin, esp_hal::gpio::Level::Low, OutputConfig::default());
+    oe_lvl_shifter.set_high();
 }
