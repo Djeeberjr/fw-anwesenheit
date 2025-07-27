@@ -28,6 +28,8 @@ mod webserver;
 type TallyChannel = PubSubChannel<NoopRawMutex, TallyID, 8, 2, 1>;
 type TallyPublisher = Publisher<'static, NoopRawMutex, TallyID, 8, 2, 1>;
 
+static mut UTC_TIME: u64 = 0;
+
 #[esp_hal_embassy::main]
 async fn main(mut spawner: Spawner) {
     let (uart_device, stack) = init::hardware_init(&mut spawner).await;

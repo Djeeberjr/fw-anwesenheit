@@ -48,7 +48,15 @@ pub async fn hardware_init(spawner: &mut Spawner) -> (Uart<'static, Async>, Stac
 
     let i2c_device = setup_i2c(peripherals.I2C0, peripherals.GPIO22, peripherals.GPIO23);
 
+    //TODO change to get I2C device back / maybe init for each protocol
+
     (uart_device, stack)
+}
+
+// Initialize the level shifter for the NFC reader and LED (output-enable (OE) input is low, all outputs are placed in the high-impedance (Hi-Z) state)
+fn init_lvl_shifter(oe_pin: GPIO0<'static>){
+    let mut oe_lvl_shifter = Output::new(oe_pin, esp_hal::gpio::Level::Low, OutputConfig::default());
+    oe_lvl_shifter.set_high();
 }
 
 fn setup_uart(
@@ -83,9 +91,14 @@ fn setup_i2c(
     }
 }
 
+fn setup_spi_led() {
 
-// Initialize the level shifter for the NFC reader and LED (output-enable (OE) input is low, all outputs are placed in the high-impedance (Hi-Z) state)
-fn init_lvl_shifter(oe_pin: GPIO0<'static>){
-    let mut oe_lvl_shifter = Output::new(oe_pin, esp_hal::gpio::Level::Low, OutputConfig::default());
-    oe_lvl_shifter.set_high();
 }
+
+fn setup_rtc() {
+    //TODO
+    //setup rtc with i2c
+    //setup interrupt for SQW
+    //setup 24-h alarm
+}
+
