@@ -74,17 +74,17 @@ async fn rtc_task(
     sqw_pin: peripherals::GPIO21<'static>,
 ) {
     let mut rtc_interrupt = init::hardware::rtc_init_iterrupt(sqw_pin).await;
-    let mut rtc = init::hardware::rtc_config(i2c).await;
+    let mut rtc = drivers::rtc::rtc_config(i2c).await;
 
     let mut utc_time = UTC_TIME.lock().await;
-    let timestamp_result = init::hardware::read_rtc_time(&mut rtc).await;
+    let timestamp_result = drivers::rtc::read_rtc_time(&mut rtc).await;
     *utc_time = timestamp_result.unwrap_or(0);
 
     loop {
         rtc_interrupt.wait_for_falling_edge().await;
         debug!("RTC interrupt triggered");
         utc_time = UTC_TIME.lock().await;
-        let timestamp_result = init::hardware::read_rtc_time(&mut rtc).await;
+        let timestamp_result = drivers::rtc::read_rtc_time(&mut rtc).await;
         *utc_time = timestamp_result.unwrap_or(0);
     }
 }

@@ -23,6 +23,19 @@ use log::error;
 use crate::init::wifi;
 use crate::init::network;
 
+/*************************************************
+ * GPIO Pinout Xiao Esp32c6 
+ *
+ * D0 -> Level Shifter OE
+ * D1 -> Level Shifter A0 -> LED
+ * D3 -> SQW Interrupt RTC
+ * D4 -> SDA
+ * D5 -> SCL
+ * D7 -> Level Shifter A1 -> NFC Reader
+ * D8 -> Buzzer
+ *
+ */
+
 const RTC_ADDRESS: u8 =  0x57;
 
 #[panic_handler]
@@ -108,34 +121,6 @@ pub async fn rtc_init_iterrupt(sqw_pin: GPIO21<'static>) -> Input<'static> {
     let config = esp_hal::gpio::InputConfig::default().with_pull(Pull::Up); //Active low interrupt in rtc
     let sqw_interrupt = Input::new(sqw_pin, config);
     sqw_interrupt
-}
-
-pub async fn rtc_config(i2c: I2c<'static, Async>) -> DS3231<I2c<'static, Async>> {
-    let mut rtc: DS3231<I2c<'static, Async>> = DS3231::new(i2c, RTC_ADDRESS);
-    let daily_alarm = Alarm1Config::AtTime {
-        hours: 0,   // set alarm every day 00:00:00 to sync time
-        minutes: 0,
-        seconds: 0,
-        is_pm: None, // 24-hour mode
-    };
-    if let Err(e) = rtc.set_alarm1(&daily_alarm).await {
-        error!("Failed to configure RTC: {:?}", e);
-        panic!();
-    }
-    rtc
-}
-
-pub async fn read_rtc_time<'a>(rtc: &'a mut DS3231<I2c<'static, Async>>) -> Result<u64, DS3231Error<esp_hal::i2c::master::Error>> {
-    match rtc.datetime().await {
-        Ok(datetime) => {
-            let utc_time = datetime.and_utc().timestamp() as u64;
-            Ok(utc_time)
-        }
-        Err(e) => {
-            error!("Failed to read RTC datetime: {:?}", e);
-            Err(e)
-        }
-    }
 }
 
 
