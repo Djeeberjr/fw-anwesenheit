@@ -1,6 +1,13 @@
+use core::slice::RChunks;
+
+use ds3231::{DS3231, Alarm1Config};
 use embassy_executor::Spawner;
-use embassy_net::Stack;
-use esp_hal::peripherals::{self, GPIO0, GPIO1, GPIO3, GPIO4, GPIO5, GPIO6, GPIO7, GPIO22, GPIO23, I2C0, UART1};
+use embassy_net::{driver, Stack};
+use embassy_sync::mutex::Mutex;
+use esp_hal::config;
+use esp_hal::gpio::{Input, Pull};
+use esp_hal::i2c::master::Config;
+use esp_hal::peripherals::{self, GPIO0, GPIO1, GPIO3, GPIO4, GPIO5, GPIO6, GPIO7, GPIO21, GPIO22, GPIO23, I2C0, UART1};
 use esp_hal::time::Rate;
 use esp_hal::{
     Async,
@@ -13,8 +20,10 @@ use esp_hal::{
 use esp_println::logger::init_logger;
 use log::error;
 
-mod network;
-mod wifi;
+use crate::init::wifi;
+use crate::init::network;
+
+const RTC_ADDRESS: u8 =  0x57;
 
 #[panic_handler]
 fn panic(_: &core::panic::PanicInfo) -> ! {
@@ -23,7 +32,7 @@ fn panic(_: &core::panic::PanicInfo) -> ! {
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-pub async fn hardware_init(spawner: &mut Spawner) -> (Uart<'static, Async>, Stack<'static>) {
+pub async fn hardware_init(spawner: &mut Spawner) -> (Uart<'static, Async>, Stack<'static>, I2c<'static, Async>, GPIO21<'static>) {
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
 
@@ -48,9 +57,12 @@ pub async fn hardware_init(spawner: &mut Spawner) -> (Uart<'static, Async>, Stac
 
     let i2c_device = setup_i2c(peripherals.I2C0, peripherals.GPIO22, peripherals.GPIO23);
 
+    //RTC Interrupt pin
+    let sqw_pin = peripherals.GPIO21;
+
     //TODO change to get I2C device back / maybe init for each protocol
 
-    (uart_device, stack)
+    (uart_device, stack, i2c_device, sqw_pin)
 }
 
 // Initialize the level shifter for the NFC reader and LED (output-enable (OE) input is low, all outputs are placed in the high-impedance (Hi-Z) state)
@@ -80,16 +92,39 @@ fn setup_i2c(
     sda: GPIO22<'static>,
     scl: GPIO23<'static>,
 ) -> I2c<'static, Async> {
-    let config = esp_hal::i2c::master::Config::default().with_frequency(Rate::from_khz(400));
-    let i2c_device = I2c::new(i2c0, config);
-    match i2c_device {
-        Ok(block) => block.with_sda(sda).with_scl(scl).into_async(),
+
+    let config = Config::default().with_frequency(Rate::from_khz(400));
+    let i2c = match I2c::new(i2c0, config) {
+        Ok(i2c) => i2c.with_sda(sda).with_scl(scl).into_async(),
         Err(e) => {
-            error!("Failed to initialize I2C: {e}");
+            error!("Failed to initialize I2C: {:?}", e);
             panic!();
         }
-    }
+    };
+    i2c
 }
+
+pub async fn rtc_init_iterrupt(sqw_pin: GPIO21<'static>) -> Input<'static> {
+    let config = esp_hal::gpio::InputConfig::default().with_pull(Pull::Up);
+    let mut sqw_interrupt = Input::new(sqw_pin, config);
+    sqw_interrupt
+}
+
+pub async fn rtc_config(i2c: I2c<'static, Async>) -> DS3231<I2c<'static, Async>> {
+    let mut rtc: DS3231<I2c<'static, Async>> = DS3231::new(i2c, RTC_ADDRESS);
+    let daily_alarm = Alarm1Config::AtTime {
+        hours: 9,
+        minutes: 30,
+        seconds: 0,
+        is_pm: None, // 24-hour mode
+    };
+    if let Err(e) = rtc.set_alarm1(&daily_alarm).await {
+        error!("Failed to configure RTC: {:?}", e);
+        panic!();
+    }
+    rtc
+}
+
 
 fn setup_spi_led() {
 

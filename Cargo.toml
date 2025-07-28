@@ -5,7 +5,7 @@ edition = "2024"
 
 [[bin]]
 name = "fw-anwesenheit"
-path = "./src/bin/main.rs"
+path = "./src/main.rs"
 test = false
 doctest = false
 bench = false
@@ -60,7 +60,7 @@ edge-nal-embassy = { version = "0.6.0", features = ["log"] }
 picoserve = { version = "0.16.0", features = ["embassy", "log"] }
 embassy-sync = { version = "0.7.0", features = ["log"] }
 
-ds3231 = "0.3.0"
+ds3231 = { version = "0.3.0", features = ["async"] }
 ws2812-spi = "0.5.1"
 
 

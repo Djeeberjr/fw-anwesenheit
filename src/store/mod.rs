@@ -1,5 +1,8 @@
-mod id_store;
 mod id_mapping;
+mod id_store;
 
+pub use id_mapping::{IDMapping, Name};
 pub use id_store::IDStore;
-pub use id_mapping::{IDMapping,Name};
+
+pub type TallyID = [u8; 8];
+pub type Date = u64;

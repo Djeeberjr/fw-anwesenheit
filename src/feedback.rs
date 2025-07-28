@@ -55,8 +55,7 @@ impl<B: Buzzer, L: StatusLed> Feedback<B, L> {
 
         let (buzzer_result, _) = join!(buzzer_handle, led_handle);
 
-        buzzer_result.unwrap_or_else(|err| {
-            error!("Failed to buzz: {err}");
+        buzzer_result.unwrap_or_else(|err| {            error!("Failed to buzz: {err}");
         });
 
         let _ = self.led_to_status();
