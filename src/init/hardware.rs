@@ -142,11 +142,3 @@ pub async fn read_rtc_time<'a>(rtc: &'a mut DS3231<I2c<'static, Async>>) -> Resu
 fn setup_spi_led() {
 
 }
-
-fn setup_rtc() {
-    //TODO
-    //setup rtc with i2c
-    //setup interrupt for SQW
-    //setup 24-h alarm
-}
-
