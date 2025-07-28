@@ -70,21 +70,21 @@ async fn wait_for_stack_up(stack: Stack<'static>) {
 
 #[embassy_executor::task]
 async fn rtc_task(
-    mut i2c: i2c::master::I2c<'static, Async>,
+    i2c: i2c::master::I2c<'static, Async>,
     sqw_pin: peripherals::GPIO21<'static>,
 ) {
     let mut rtc_interrupt = init::hardware::rtc_init_iterrupt(sqw_pin).await;
     let mut rtc = init::hardware::rtc_config(i2c).await;
 
+    let mut utc_time = UTC_TIME.lock().await;
+    let timestamp_result = init::hardware::read_rtc_time(&mut rtc).await;
+    *utc_time = timestamp_result.unwrap_or(0);
+
     loop {
         rtc_interrupt.wait_for_falling_edge().await;
         debug!("RTC interrupt triggered");
-        if let Ok(datetime) = rtc.datetime().await {
-            let mut utc_time = UTC_TIME.lock().await;
-            *utc_time = datetime.and_utc().timestamp() as u64;
-            info!("RTC updated UTC_TIME: {}", *utc_time);
-        } else {
-            info!("Failed to read RTC datetime");
-        }
+        utc_time = UTC_TIME.lock().await;
+        let timestamp_result = init::hardware::read_rtc_time(&mut rtc).await;
+        *utc_time = timestamp_result.unwrap_or(0);
     }
 }
