@@ -4,6 +4,8 @@ use embassy_time::Duration;
 use picoserve::{AppBuilder, AppRouter, routing::get};
 use static_cell::make_static;
 
+mod assets;
+
 pub fn start_webserver(spawner: &mut Spawner, stack: Stack<'static>) {
     let app = make_static!(AppProps.build_app());
 
@@ -23,7 +25,7 @@ impl AppBuilder for AppProps {
     type PathRouter = impl picoserve::routing::PathRouter;
 
     fn build_app(self) -> picoserve::Router<Self::PathRouter> {
-        picoserve::Router::new().route("/", get(|| async move { "Hello World" }))
+        picoserve::Router::from_service(assets::Assets).route("/api/a", get(async move || "Hello"))
     }
 }
 
