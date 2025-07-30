@@ -1,7 +1,31 @@
+use std::env;
+use std::path::Path;
+use std::fs::File;
+use std::io::Write;
+
 fn main() {
     linker_be_nice();
     // make sure linkall.x is the last linker script (otherwise might cause problems with flip-link)
     println!("cargo:rustc-link-arg=-Tlinkall.x");
+    save_build_time();
+}
+
+fn save_build_time() {
+    let out_dir = env::var("OUT_DIR").unwrap();
+    let dest_path = Path::new(&out_dir).join("build_time.rs");
+    let system_time = std::time::SystemTime::now();
+    let unix_time = system_time
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    println!("cargo:rustc-env=BUILD_TIME={}", unix_time);
+    let content = format!(
+        "/// compile time as UNIX-Timestamp (seconds since 1970-01-01)
+        pub const BUILD_UNIX_TIME: u64 = {};",
+        unix_time
+    );
+    let mut f = File::create(dest_path).unwrap();
+    f.write_all(content.as_bytes()).unwrap();
 }
 
 fn linker_be_nice() {
@@ -14,7 +38,9 @@ fn linker_be_nice() {
             "undefined-symbol" => match what.as_str() {
                 "_defmt_timestamp" => {
                     eprintln!();
-                    eprintln!("💡 `defmt` not found - make sure `defmt.x` is added as a linker script and you have included `use defmt_rtt as _;`");
+                    eprintln!(
+                        "💡 `defmt` not found - make sure `defmt.x` is added as a linker script and you have included `use defmt_rtt as _;`"
+                    );
                     eprintln!();
                 }
                 "_stack_start" => {

@@ -13,17 +13,20 @@ use embassy_sync::{
 };
 use embassy_time::{Duration, Timer};
 use esp_alloc::psram_allocator;
-use esp_hal::{i2c, peripherals, Async};
+use esp_hal::{gpio::Output, i2c, peripherals, Async};
 use esp_hal::uart::Uart;
 use log::{debug, info};
 use static_cell::make_static;
 
 use crate::{store::TallyID, webserver::start_webserver};
 
+include!(concat!(env!("OUT_DIR"), "/build_time.rs"));
+
 mod init;
 mod drivers;
 mod store;
 mod webserver;
+mod feedback;
 
 type TallyChannel = PubSubChannel<NoopRawMutex, TallyID, 8, 2, 1>;
 type TallyPublisher = Publisher<'static, NoopRawMutex, TallyID, 8, 2, 1>;
@@ -32,7 +35,13 @@ static UTC_TIME: Mutex<CriticalSectionRawMutex, u64> = Mutex::new(0);
 
 #[esp_hal_embassy::main]
 async fn main(mut spawner: Spawner) {
-    let (uart_device, stack, i2c, sqw_pin) = init::hardware::hardware_init(&mut spawner).await;
+    {
+        let mut utc_time = UTC_TIME.lock().await;
+        *utc_time = BUILD_UNIX_TIME;
+        info!("UTC Time initialized to: {}", *utc_time);
+    }
+
+    let (uart_device, stack, _i2c, sqw_pin, buzzer_gpio) = init::hardware::hardware_init(&mut spawner).await;
 
     wait_for_stack_up(stack).await;
 
@@ -42,8 +51,12 @@ async fn main(mut spawner: Spawner) {
 
     let publisher = chan.publisher().unwrap();
 
+    debug!("spawing NFC reader task");
     spawner.must_spawn(drivers::nfc_reader::rfid_reader_task(uart_device, publisher));
-    spawner.must_spawn(rtc_task(i2c, sqw_pin));
+    //debug!("spawing rtc task");
+    //spawner.must_spawn(rtc_task(_i2c, sqw_pin));
+    debug!("spawing feedback task");
+    spawner.must_spawn(drivers::buzzer::feedback_task(buzzer_gpio));
 
     let mut sub = chan.subscriber().unwrap();
     loop {
@@ -65,26 +78,5 @@ async fn wait_for_stack_up(stack: Stack<'static>) {
             break;
         }
         Timer::after(Duration::from_millis(500)).await;
-    }
-}
-
-#[embassy_executor::task]
-async fn rtc_task(
-    i2c: i2c::master::I2c<'static, Async>,
-    sqw_pin: peripherals::GPIO21<'static>,
-) {
-    let mut rtc_interrupt = init::hardware::rtc_init_iterrupt(sqw_pin).await;
-    let mut rtc = drivers::rtc::rtc_config(i2c).await;
-
-    let mut utc_time = UTC_TIME.lock().await;
-    let timestamp_result = drivers::rtc::read_rtc_time(&mut rtc).await;
-    *utc_time = timestamp_result.unwrap_or(0);
-
-    loop {
-        rtc_interrupt.wait_for_falling_edge().await;
-        debug!("RTC interrupt triggered");
-        utc_time = UTC_TIME.lock().await;
-        let timestamp_result = drivers::rtc::read_rtc_time(&mut rtc).await;
-        *utc_time = timestamp_result.unwrap_or(0);
     }
 }

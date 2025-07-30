@@ -984,6 +984,7 @@ name = "fw-anwesenheit"
 version = "0.1.0"
 dependencies = [
  "bleps",
+ "chrono",
  "critical-section",
  "ds3231",
  "edge-dhcp",

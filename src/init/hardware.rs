@@ -1,13 +1,10 @@
-use core::slice::RChunks;
-
-use ds3231::{Alarm1Config, DS3231Error, DS3231};
 use embassy_executor::Spawner;
 use embassy_net::{driver, Stack};
 use embassy_sync::mutex::Mutex;
 use esp_hal::config;
 use esp_hal::gpio::{Input, Pull};
 use esp_hal::i2c::master::Config;
-use esp_hal::peripherals::{self, GPIO0, GPIO1, GPIO3, GPIO4, GPIO5, GPIO6, GPIO7, GPIO21, GPIO22, GPIO23, I2C0, UART1};
+use esp_hal::peripherals::{self, GPIO0, GPIO1, GPIO3, GPIO4, GPIO5, GPIO6, GPIO7, GPIO19, GPIO21, GPIO22, GPIO23, I2C0, UART1};
 use esp_hal::time::Rate;
 use esp_hal::{
     Async,
@@ -18,7 +15,7 @@ use esp_hal::{
     gpio::{Output, OutputConfig}
 };
 use esp_println::logger::init_logger;
-use log::error;
+use log::{debug, error};
 
 use crate::init::wifi;
 use crate::init::network;
@@ -26,17 +23,15 @@ use crate::init::network;
 /*************************************************
  * GPIO Pinout Xiao Esp32c6 
  *
- * D0 -> Level Shifter OE
- * D1 -> Level Shifter A0 -> LED
- * D3 -> SQW Interrupt RTC
- * D4 -> SDA
- * D5 -> SCL
- * D7 -> Level Shifter A1 -> NFC Reader
- * D8 -> Buzzer
+ * D0 -> GPIO0  -> Level Shifter OE
+ * D1 -> GPIO1  -> Level Shifter A0 -> LED
+ * D3 -> GPIO21 -> SQW Interrupt RTC
+ * D4 -> GPIO22 -> SDA
+ * D5 -> GPIO23 -> SCL
+ * D7 -> GPIO17 -> Level Shifter A1 -> NFC Reader
+ * D8 -> GPIO19 -> Buzzer
  *
- */
-
-const RTC_ADDRESS: u8 =  0x57;
+ *************************************************/
 
 #[panic_handler]
 fn panic(_: &core::panic::PanicInfo) -> ! {
@@ -45,7 +40,7 @@ fn panic(_: &core::panic::PanicInfo) -> ! {
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-pub async fn hardware_init(spawner: &mut Spawner) -> (Uart<'static, Async>, Stack<'static>, I2c<'static, Async>, GPIO21<'static>) {
+pub async fn hardware_init(spawner: &mut Spawner) -> (Uart<'static, Async>, Stack<'static>, I2c<'static, Async>, GPIO21<'static>, GPIO19<'static>) {
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
 
@@ -73,9 +68,11 @@ pub async fn hardware_init(spawner: &mut Spawner) -> (Uart<'static, Async>, Stac
     //RTC Interrupt pin
     let sqw_pin = peripherals.GPIO21;
 
-    //TODO change to get I2C device back / maybe init for each protocol
+    let buzzer_gpio = peripherals.GPIO19;
 
-    (uart_device, stack, i2c_device, sqw_pin)
+    debug!("hardware init done");
+
+    (uart_device, stack, i2c_device, sqw_pin, buzzer_gpio)
 }
 
 // Initialize the level shifter for the NFC reader and LED (output-enable (OE) input is low, all outputs are placed in the high-impedance (Hi-Z) state)
@@ -105,7 +102,7 @@ fn setup_i2c(
     sda: GPIO22<'static>,
     scl: GPIO23<'static>,
 ) -> I2c<'static, Async> {
-
+    debug!("init I2C");
     let config = Config::default().with_frequency(Rate::from_khz(400));
     let i2c = match I2c::new(i2c0, config) {
         Ok(i2c) => i2c.with_sda(sda).with_scl(scl).into_async(),
@@ -117,10 +114,18 @@ fn setup_i2c(
     i2c
 }
 
-pub async fn rtc_init_iterrupt(sqw_pin: GPIO21<'static>) -> Input<'static> {
+pub async fn setup_rtc_iterrupt(sqw_pin: GPIO21<'static>) -> Input<'static> {
+    debug!("init rtc interrupt");
     let config = esp_hal::gpio::InputConfig::default().with_pull(Pull::Up); //Active low interrupt in rtc
     let sqw_interrupt = Input::new(sqw_pin, config);
     sqw_interrupt
+}
+
+pub async fn setup_buzzer(buzzer_gpio: GPIO19<'static>) -> Output<'static> {
+    let config = esp_hal::gpio::OutputConfig::default().with_drive_strength(esp_hal::gpio::DriveStrength::_40mA);
+    let buzzer = Output::new(buzzer_gpio, esp_hal::gpio::Level::Low, config);
+
+    buzzer
 }
 
 
