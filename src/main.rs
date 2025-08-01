@@ -3,11 +3,10 @@
 #![feature(type_alias_impl_trait)]
 #![feature(impl_trait_in_assoc_type)]
 
-use esp_alloc::EspHeap;
 use embassy_executor::Spawner;
 use embassy_net::Stack;
 use embassy_sync::{
-    blocking_mutex::raw::{NoopRawMutex, CriticalSectionRawMutex},
+    blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex},
     pubsub::{
         PubSubChannel, Publisher,
         WaitResult::{Lagged, Message},
@@ -15,18 +14,17 @@ use embassy_sync::{
     signal::Signal,
 };
 use embassy_time::{Duration, Timer};
+use esp_alloc::EspHeap;
 use log::{debug, info};
 use static_cell::make_static;
 
 use crate::{store::TallyID, webserver::start_webserver};
 
-mod init;
 mod drivers;
 mod feedback;
+mod init;
 mod store;
 mod webserver;
-
-include!(concat!(env!("OUT_DIR"), "/build_time.rs"));
 
 static UTC_TIME: Signal<CriticalSectionRawMutex, u64> = Signal::new();
 static FEEDBACK_STATE: Signal<CriticalSectionRawMutex, feedback::FeedbackState> = Signal::new();
@@ -36,7 +34,6 @@ type TallyPublisher = Publisher<'static, NoopRawMutex, TallyID, 8, 2, 1>;
 
 #[esp_hal_embassy::main]
 async fn main(mut spawner: Spawner) {
-
     let (uart_device, stack, _i2c, sqw_pin, buzzer_gpio) =
         init::hardware::hardware_init(&mut spawner).await;
 
@@ -58,7 +55,7 @@ async fn main(mut spawner: Spawner) {
     ));
 
     debug!("spawing rtc task");
-    spawner.must_spawn(drivers::rtc::rtc_task());
+    spawner.must_spawn(drivers::rtc::rtc_task(_i2c, sqw_pin));
 
     debug!("spawing feedback task..");
     spawner.must_spawn(feedback::feedback_task(buzzer_gpio));
@@ -66,13 +63,11 @@ async fn main(mut spawner: Spawner) {
 
     let mut sub = chan.subscriber().unwrap();
 
-
-    debug!("everythig spwawned");
+    debug!("everything spawned");
     FEEDBACK_STATE.signal(feedback::FeedbackState::Startup);
 
     loop {
-
-        info!("runnung in main loop");
+        info!("running in main loop");
         Timer::after(Duration::from_millis(1000)).await;
         // let wait_result = sub.next_message().await;
         // match wait_result {

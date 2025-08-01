@@ -35,7 +35,15 @@ pub async fn feedback_task(buzzer: peripherals::GPIO19<'static>) {
                 Timer::after(Duration::from_millis(100)).await;
                 buzzer.set_low();
             }
-            FeedbackState::Error => {}
+            FeedbackState::Error => {
+                buzzer.set_high();
+                Timer::after(Duration::from_millis(500)).await;
+                buzzer.set_low();
+                Timer::after(Duration::from_millis(500)).await;
+                buzzer.set_high();
+                Timer::after(Duration::from_millis(500)).await;
+                buzzer.set_low();
+            }
             FeedbackState::Startup => {
                 buzzer.set_high();
                 Timer::after(Duration::from_millis(10)).await;
