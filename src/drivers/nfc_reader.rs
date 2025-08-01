@@ -1,9 +1,8 @@
 use embassy_time::{Duration, Timer};
-use esp_hal::{uart::Uart, Async};
-use log::{ debug, info };
+use esp_hal::{Async, uart::Uart};
+use log::{debug, info};
 
 use crate::TallyPublisher;
-
 
 #[embassy_executor::task]
 pub async fn rfid_reader_task(mut uart_device: Uart<'static, Async>, chan: TallyPublisher) {

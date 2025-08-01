@@ -1,6 +1,7 @@
 use embassy_executor::Spawner;
 use embassy_net::{driver, Stack};
-use embassy_sync::mutex::Mutex;
+use embassy_sync::blocking_mutex::raw::NoopRawMutex;
+use embassy_sync::blocking_mutex::Mutex;
 use esp_hal::config;
 use esp_hal::gpio::{Input, Pull};
 use esp_hal::i2c::master::Config;
@@ -39,6 +40,8 @@ fn panic(_: &core::panic::PanicInfo) -> ! {
 }
 
 esp_bootloader_esp_idf::esp_app_desc!();
+
+
 
 pub async fn hardware_init(spawner: &mut Spawner) -> (Uart<'static, Async>, Stack<'static>, I2c<'static, Async>, GPIO21<'static>, GPIO19<'static>) {
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
@@ -121,7 +124,7 @@ pub async fn setup_rtc_iterrupt(sqw_pin: GPIO21<'static>) -> Input<'static> {
     sqw_interrupt
 }
 
-pub async fn setup_buzzer(buzzer_gpio: GPIO19<'static>) -> Output<'static> {
+pub fn setup_buzzer(buzzer_gpio: GPIO19<'static>) -> Output<'static> {
     let config = esp_hal::gpio::OutputConfig::default().with_drive_strength(esp_hal::gpio::DriveStrength::_40mA);
     let buzzer = Output::new(buzzer_gpio, esp_hal::gpio::Level::Low, config);
 

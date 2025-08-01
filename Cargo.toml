@@ -20,7 +20,7 @@ embassy-net = { version = "0.7.0", features = [
 ] }
 embedded-io = "0.6.1"
 embedded-io-async = "0.6.1"
-esp-alloc = "0.8.0" 
+esp-alloc = "0.8.0"
 esp-hal = { version = "1.0.0-beta.1", features = ["esp32c6", "unstable"] } 
 smoltcp = { version = "0.12.0", default-features = false, features = [
   "medium-ethernet",
@@ -59,6 +59,7 @@ edge-nal = "0.5.0"
 edge-nal-embassy = { version = "0.6.0", features = ["log"] }
 picoserve = { version = "0.16.0", features = ["embassy", "log"] }
 embassy-sync = { version = "0.7.0", features = ["log"] }
+
 ds3231 = { version = "0.3.0", features = ["async", "temperature_f32"] }
 ws2812-spi = "0.5.1"
 chrono = { version = "0.4.41", default-features = false } 

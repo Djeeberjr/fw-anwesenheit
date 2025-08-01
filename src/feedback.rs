@@ -1,4 +1,67 @@
+use embassy_time::{Delay, Duration, Timer};
+use esp_hal::{delay, gpio::Output, peripherals};
+use log::{debug, error, info};
 
+use crate::{FEEDBACK_STATE, init};
+
+#[derive(Copy, Clone, Debug)]
+pub enum FeedbackState {
+    Ack,
+    Nak,
+    Error,
+    Startup,
+    Idle,
+}
+
+#[embassy_executor::task]
+pub async fn feedback_task(buzzer: peripherals::GPIO19<'static>) {
+    debug!("Starting feedback task");
+    let mut buzzer = init::hardware::setup_buzzer(buzzer);
+    loop {
+        let feedback_state = FEEDBACK_STATE.wait().await;
+        match feedback_state {
+            FeedbackState::Ack => {
+                buzzer.set_high();
+                Timer::after(Duration::from_millis(100)).await;
+                buzzer.set_low();
+                Timer::after(Duration::from_millis(50)).await;
+            }
+            FeedbackState::Nak => {
+                buzzer.set_high();
+                Timer::after(Duration::from_millis(100)).await;
+                buzzer.set_low();
+                Timer::after(Duration::from_millis(100)).await;
+                buzzer.set_high();
+                Timer::after(Duration::from_millis(100)).await;
+                buzzer.set_low();
+            }
+            FeedbackState::Error => {}
+            FeedbackState::Startup => {
+                buzzer.set_high();
+                Timer::after(Duration::from_millis(10)).await;
+                buzzer.set_low();
+                Timer::after(Duration::from_millis(10)).await;
+                buzzer.set_high();
+                Timer::after(Duration::from_millis(10)).await;
+                buzzer.set_low();
+                Timer::after(Duration::from_millis(50)).await;
+                buzzer.set_high();
+                Timer::after(Duration::from_millis(100)).await;
+                buzzer.set_low();
+            }
+            FeedbackState::Idle => {
+                // Do nothing
+            }
+        };
+        debug!("Feedback state: {:?}", feedback_state);
+    }
+}
+
+// async fn beep_ack() {
+//     buzzer.set_high();
+//     buzzer.set_low();
+//     //Timer::after(Duration::from_millis(100)).await;
+// }
 
 /* pub async fn failure(&mut self) {
     let buzzer_handle = Self::beep_nak(&mut self.buzzer);
