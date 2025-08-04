@@ -38,8 +38,10 @@ use crate::init::wifi;
  *************************************************/
 
 #[panic_handler]
-fn panic(_: &core::panic::PanicInfo) -> ! {
-    loop {}
+fn panic(info: &core::panic::PanicInfo) -> ! {
+    loop {
+        error!("PANIC: {info}");
+    }
 }
 
 esp_bootloader_esp_idf::esp_app_desc!();
