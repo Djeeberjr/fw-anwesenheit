@@ -6,15 +6,12 @@
 use embassy_executor::Spawner;
 use embassy_net::Stack;
 use embassy_sync::{
-    blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex},
-    pubsub::{
+    blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex}, channel::Channel, pubsub::{
         PubSubChannel, Publisher,
         WaitResult::{Lagged, Message},
-    },
-    signal::Signal,
+    }, signal::Signal
 };
 use embassy_time::{Duration, Timer};
-use esp_alloc::EspHeap;
 use log::{debug, info};
 use static_cell::make_static;
 
@@ -26,7 +23,6 @@ mod init;
 mod store;
 mod webserver;
 
-static UTC_TIME: Signal<CriticalSectionRawMutex, u64> = Signal::new();
 static FEEDBACK_STATE: Signal<CriticalSectionRawMutex, feedback::FeedbackState> = Signal::new();
 
 type TallyChannel = PubSubChannel<NoopRawMutex, TallyID, 8, 2, 1>;
@@ -34,7 +30,7 @@ type TallyPublisher = Publisher<'static, NoopRawMutex, TallyID, 8, 2, 1>;
 
 #[esp_hal_embassy::main]
 async fn main(mut spawner: Spawner) {
-    let (uart_device, stack, _i2c, sqw_pin, buzzer_gpio) =
+    let (uart_device, stack, _i2c, buzzer_gpio) =
         init::hardware::hardware_init(&mut spawner).await;
 
     wait_for_stack_up(stack).await;
@@ -47,15 +43,14 @@ async fn main(mut spawner: Spawner) {
 
     let publisher = chan.publisher().unwrap();
 
+    let mut rtc = drivers::rtc::RTCClock::new(_i2c).await;
+
     /****************************** Spawning tasks ***********************************/
     debug!("spawing NFC reader task...");
     spawner.must_spawn(drivers::nfc_reader::rfid_reader_task(
         uart_device,
         publisher,
     ));
-
-    debug!("spawing rtc task");
-    spawner.must_spawn(drivers::rtc::rtc_task(_i2c, sqw_pin));
 
     debug!("spawing feedback task..");
     spawner.must_spawn(feedback::feedback_task(buzzer_gpio));
@@ -67,8 +62,10 @@ async fn main(mut spawner: Spawner) {
     FEEDBACK_STATE.signal(feedback::FeedbackState::Startup);
 
     loop {
-        info!("running in main loop");
+        rtc.get_time().await;
+        info!("Current RTC time: {}", rtc.get_time().await);
         Timer::after(Duration::from_millis(1000)).await;
+
         // let wait_result = sub.next_message().await;
         // match wait_result {
         //     Lagged(_) => debug!("Lagged"),
