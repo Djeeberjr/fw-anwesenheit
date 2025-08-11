@@ -2,13 +2,14 @@ use embassy_executor::Spawner;
 use embassy_net::{Stack, driver};
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::blocking_mutex::raw::NoopRawMutex;
-use esp_hal::config;
 use esp_hal::gpio::{Input, Pull};
 use esp_hal::i2c::master::Config;
 use esp_hal::peripherals::{
-    self, GPIO0, GPIO1, GPIO3, GPIO4, GPIO5, GPIO6, GPIO7, GPIO19, GPIO21, GPIO22, GPIO23, I2C0,
+    self, GPIO0, GPIO1, GPIO2, GPIO21, GPIO22, GPIO23, GPIO16, GPIO17, GPIO20, GPIO10, GPIO19, GPIO6, GPIO7, I2C0,
     UART1,
 };
+use esp_hal::spi::master::Spi;
+use esp_hal::spi::master::Config as Spi_config;
 use esp_hal::time::Rate;
 use esp_hal::{
     Async,
@@ -27,14 +28,18 @@ use crate::init::wifi;
 /*************************************************
  * GPIO Pinout Xiao Esp32c6
  *
- * D0 -> GPIO0  -> Level Shifter OE
- * D1 -> GPIO1  -> Level Shifter A0 -> LED
- * D3 -> GPIO21 -> SQW Interrupt RTC //not in use anymore
- * D4 -> GPIO22 -> SDA
- * D5 -> GPIO23 -> SCL
- * D7 -> GPIO17 -> Level Shifter A1 -> NFC Reader
- * D8 -> GPIO19 -> Buzzer
- *
+ * D0  -> GPIO0  -> Level Shifter OE
+ * D1  -> GPIO1  -> Level Shifter A0 -> LED
+ * D2  -> GPIO2  -> SPI/CS
+ * D3  -> GPIO21 -> Buzzer
+ * D4  -> GPIO22 -> I2C/SDA
+ * D5  -> GPIO23 -> I2C/SCL
+ * D6  -> GPIO16 -> UART/TX
+ * D7  -> GPIO17 -> UART/RX -> Level Shifter A1 -> NFC Reader
+ * D8  -> GPIO19 -> SPI/SCLK
+ * D9  -> GPIO20 -> SPI/MISO
+ * D10 -> GPIO10 -> SPI/MOSI
+ * 
  *************************************************/
 
 #[panic_handler]
@@ -52,7 +57,7 @@ pub async fn hardware_init(
     Uart<'static, Async>,
     Stack<'static>,
     I2c<'static, Async>,
-    GPIO19<'static>,
+    GPIO21<'static>,
 ) {
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
@@ -74,11 +79,21 @@ pub async fn hardware_init(
 
     init_lvl_shifter(peripherals.GPIO0);
 
-    let uart_device = setup_uart(peripherals.UART1, peripherals.GPIO7, peripherals.GPIO6);
+    let uart_device = setup_uart(peripherals.UART1, peripherals.GPIO16, peripherals.GPIO17);
 
     let i2c_device = setup_i2c(peripherals.I2C0, peripherals.GPIO22, peripherals.GPIO23);
 
-    let buzzer_gpio = peripherals.GPIO19;
+    let buzzer_gpio = peripherals.GPIO21;
+    
+    let spi = match Spi::new(peripherals.SPI2 , Spi_config::default()) {
+        Ok(spi) => spi.with_mosi(peripherals.GPIO18).with_miso(peripherals.GPIO20),
+         Err(e) => {
+            error!("Failed to initialize I2C: {:?}", e);
+            panic!(); //TODO panic!
+
+        }
+    };
+
 
     debug!("hardware init done");
 
@@ -94,8 +109,8 @@ fn init_lvl_shifter(oe_pin: GPIO0<'static>) {
 
 fn setup_uart(
     uart1: UART1<'static>,
-    uart_rx: GPIO7<'static>,
-    uart_tx: GPIO6<'static>,
+    uart_tx: GPIO16<'static>,
+    uart_rx: GPIO17<'static>,
 ) -> Uart<'static, Async> {
     let uard_device = Uart::new(uart1, esp_hal::uart::Config::default().with_baudrate(9600));
 
@@ -103,7 +118,7 @@ fn setup_uart(
         Ok(block) => block.with_rx(uart_rx).with_tx(uart_tx).into_async(),
         Err(e) => {
             error!("Failed to initialize UART: {e}");
-            panic!();
+            panic!(); //TODO panic!
         }
     }
 }
@@ -119,20 +134,13 @@ fn setup_i2c(
         Ok(i2c) => i2c.with_sda(sda).with_scl(scl).into_async(),
         Err(e) => {
             error!("Failed to initialize I2C: {:?}", e);
-            panic!();
+            panic!(); //TODO panic!
         }
     };
     i2c
 }
 
-pub async fn setup_rtc_iterrupt(sqw_pin: GPIO21<'static>) -> Input<'static> {
-    debug!("init rtc interrupt");
-    let config = esp_hal::gpio::InputConfig::default().with_pull(Pull::Up); //Active low interrupt in rtc
-    let sqw_interrupt = Input::new(sqw_pin, config);
-    sqw_interrupt
-}
-
-pub fn setup_buzzer(buzzer_gpio: GPIO19<'static>) -> Output<'static> {
+pub fn setup_buzzer(buzzer_gpio: GPIO21<'static>) -> Output<'static> {
     let config = esp_hal::gpio::OutputConfig::default()
         .with_drive_strength(esp_hal::gpio::DriveStrength::_40mA);
     let buzzer = Output::new(buzzer_gpio, esp_hal::gpio::Level::Low, config);

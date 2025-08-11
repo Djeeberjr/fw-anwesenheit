@@ -14,7 +14,7 @@ pub enum FeedbackState {
 }
 
 #[embassy_executor::task]
-pub async fn feedback_task(buzzer: peripherals::GPIO19<'static>) {
+pub async fn feedback_task(buzzer: peripherals::GPIO21<'static>) {
     debug!("Starting feedback task");
     let mut buzzer = init::hardware::setup_buzzer(buzzer);
     loop {
