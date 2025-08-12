@@ -26,6 +26,7 @@ use esp_hal::{
 
 use esp_hal_smartled::{SmartLedsAdapterAsync, buffer_size_async};
 
+use smart_leds::colors::{BLUE, GREEN, RED};
 use smart_leds::{
     RGB8, SmartLedsWriteAsync, brightness, gamma,
     hsv::{Hsv, hsv2rgb},
@@ -111,37 +112,16 @@ pub async fn hardware_init(
 
     debug!("hardware init done");
 
-    let mut color = Hsv {
-        hue: 162,
-        sat: 226,
-        val: 10,
-    };
-
-    let mut data: RGB8;
     let level = 100;
 
-    
-    let pixel: RGB8 = RGB8 { r: 0, g: 100, b: 0 };
+    let led_array: [RGB8; 66] = [RED, GREEN, BLUE, RED, GREEN, BLUE, RED, GREEN, BLUE, RED, GREEN, BLUE,
+ RED, GREEN, BLUE, RED, GREEN, BLUE, RED, GREEN, BLUE, RED, GREEN, BLUE,
+ RED, GREEN, BLUE, RED, GREEN, BLUE, RED, GREEN, BLUE, RED, GREEN, BLUE,
+ RED, GREEN, BLUE, RED, GREEN, BLUE, RED, GREEN, BLUE, RED, GREEN, BLUE,
+ RED, GREEN, BLUE, RED, GREEN, BLUE, RED, GREEN, BLUE, RED, GREEN, BLUE,
+ RED, GREEN, BLUE, RED, BLUE, RED];
 
-    for hue in 0..=255 {
-        color.hue = hue;
-        // Convert from the HSV color space (where we can easily transition from one
-        // color to the other) to the RGB color space that we can then send to the LED
-        data = hsv2rgb(color);
-        // When sending to the LED, we do a gamma correction first (see smart_leds
-        // documentation for details) and then limit the brightness to 10 out of 255 so
-        // that the output is not too bright.
-        led.write(pixel.iter())
-            .await
-            .expect("failed to write LED data");
-
-
-        // for i in 0..64 {
-        //     debug!("iterator {}", i);
-        //     led.write(pixel)
-        // } 
-        
-    }
+    led.write(brightness(led_array.into_iter(), level)).await.unwrap();
 
     (uart_device, stack, i2c_device, buzzer_gpio)
 }
@@ -220,7 +200,7 @@ pub fn setup_buzzer(buzzer_gpio: GPIO21<'static>) -> Output<'static> {
 fn setup_led(
     rmt: RMT<'static>,
     led_gpio: GPIO1<'static>,
-) -> SmartLedsAdapterAsync<ConstChannelAccess<esp_hal::rmt::Tx, 0>, 1600> {
+) -> SmartLedsAdapterAsync<ConstChannelAccess<esp_hal::rmt::Tx, 0>, 1650> {
     debug!("setup led");
     let rmt: Rmt<'_, esp_hal::Async> = {
         let frequency: Rate = Rate::from_mhz(80);
@@ -230,9 +210,9 @@ fn setup_led(
     .into_async();
 
     let rmt_channel = rmt.channel0;
-    let rmt_buffer = [0_u32; buffer_size_async(64)];
+    let rmt_buffer = [0_u32; buffer_size_async(66)];
 
-    let mut led: SmartLedsAdapterAsync<_, 1600> =
+    let led: SmartLedsAdapterAsync<_, 1650> =
         SmartLedsAdapterAsync::new(rmt_channel, led_gpio, rmt_buffer);
 
     led
