@@ -1,24 +1,36 @@
 use embassy_executor::Spawner;
-use embassy_net::{Stack, driver};
-use embassy_sync::blocking_mutex::Mutex;
-use embassy_sync::blocking_mutex::raw::NoopRawMutex;
-use esp_hal::gpio::{Input, Pull};
+use embassy_net::Stack;
+use embassy_time::Duration;
+use embedded_sdmmc_dev::SdCard;
 use esp_hal::i2c::master::Config;
 use esp_hal::peripherals::{
-    self, GPIO0, GPIO1, GPIO2, GPIO21, GPIO22, GPIO23, GPIO16, GPIO17, GPIO20, GPIO10, GPIO19, GPIO6, GPIO7, I2C0,
-    UART1,
+    self, GPIO0, GPIO1, GPIO2, GPIO10, GPIO16, GPIO17, GPIO18, GPIO19, GPIO20, GPIO21, GPIO22,
+    GPIO23, I2C0, RMT, SPI2, UART1,
 };
-use esp_hal::spi::master::Spi;
-use esp_hal::spi::master::Config as Spi_config;
+use esp_hal::rmt::{ConstChannelAccess, Rmt, Tx};
+use esp_hal::spi::{
+    Mode,
+    master::{Config as Spi_config, Spi},
+};
+
 use esp_hal::time::Rate;
+use esp_hal::timer::timg::TimerGroup;
 use esp_hal::{
     Async,
     clock::CpuClock,
     gpio::{Output, OutputConfig},
     i2c::master::I2c,
-    timer::{systimer::SystemTimer, timg::TimerGroup},
+    timer::systimer::SystemTimer,
     uart::Uart,
 };
+
+use esp_hal_smartled::{SmartLedsAdapterAsync, buffer_size_async};
+
+use smart_leds::{
+    RGB8, SmartLedsWriteAsync, brightness, gamma,
+    hsv::{Hsv, hsv2rgb},
+};
+
 use esp_println::logger::init_logger;
 use log::{debug, error};
 
@@ -39,7 +51,7 @@ use crate::init::wifi;
  * D8  -> GPIO19 -> SPI/SCLK
  * D9  -> GPIO20 -> SPI/MISO
  * D10 -> GPIO10 -> SPI/MOSI
- * 
+ *
  *************************************************/
 
 #[panic_handler]
@@ -83,19 +95,53 @@ pub async fn hardware_init(
 
     let i2c_device = setup_i2c(peripherals.I2C0, peripherals.GPIO22, peripherals.GPIO23);
 
+    let spi_device = setup_spi(
+        peripherals.SPI2,
+        peripherals.GPIO19,
+        peripherals.GPIO20,
+        peripherals.GPIO18,
+        peripherals.GPIO2,
+    );
+
+    let sd_card = setup_sdcard(spi_device);
+
     let buzzer_gpio = peripherals.GPIO21;
-    
-    let spi = match Spi::new(peripherals.SPI2 , Spi_config::default()) {
-        Ok(spi) => spi.with_mosi(peripherals.GPIO18).with_miso(peripherals.GPIO20),
-         Err(e) => {
-            error!("Failed to initialize I2C: {:?}", e);
-            panic!(); //TODO panic!
 
-        }
-    };
-
+    let mut led = setup_led(peripherals.RMT, peripherals.GPIO1);
 
     debug!("hardware init done");
+
+    let mut color = Hsv {
+        hue: 162,
+        sat: 226,
+        val: 10,
+    };
+
+    let mut data: RGB8;
+    let level = 100;
+
+    
+    let pixel: RGB8 = RGB8 { r: 0, g: 100, b: 0 };
+
+    for hue in 0..=255 {
+        color.hue = hue;
+        // Convert from the HSV color space (where we can easily transition from one
+        // color to the other) to the RGB color space that we can then send to the LED
+        data = hsv2rgb(color);
+        // When sending to the LED, we do a gamma correction first (see smart_leds
+        // documentation for details) and then limit the brightness to 10 out of 255 so
+        // that the output is not too bright.
+        led.write(pixel.iter())
+            .await
+            .expect("failed to write LED data");
+
+
+        // for i in 0..64 {
+        //     debug!("iterator {}", i);
+        //     led.write(pixel)
+        // } 
+        
+    }
 
     (uart_device, stack, i2c_device, buzzer_gpio)
 }
@@ -140,6 +186,29 @@ fn setup_i2c(
     i2c
 }
 
+fn setup_spi(
+    spi2: SPI2<'static>,
+    sck: GPIO19<'static>,
+    miso: GPIO20<'static>,
+    mosi: GPIO18<'static>,
+    cs: GPIO2<'static>,
+) -> Spi<'static, Async> {
+    let spi = match Spi::new(spi2, Spi_config::default()) {
+        Ok(spi) => spi
+            .with_sck(sck)
+            .with_miso(miso)
+            .with_mosi(mosi)
+            .with_cs(cs)
+            .into_async(),
+        Err(e) => panic!("Failed to initialize SPI: {:?}", e),
+    };
+    spi
+}
+
+fn setup_sdcard(spi_device: Spi<'static, Async>) {
+    //let sdcard = SdCard::new(spi_device as embedded_hal::spi::SpiDevice(), delayer)
+}
+
 pub fn setup_buzzer(buzzer_gpio: GPIO21<'static>) -> Output<'static> {
     let config = esp_hal::gpio::OutputConfig::default()
         .with_drive_strength(esp_hal::gpio::DriveStrength::_40mA);
@@ -148,4 +217,23 @@ pub fn setup_buzzer(buzzer_gpio: GPIO21<'static>) -> Output<'static> {
     buzzer
 }
 
-fn setup_spi_led() {}
+fn setup_led(
+    rmt: RMT<'static>,
+    led_gpio: GPIO1<'static>,
+) -> SmartLedsAdapterAsync<ConstChannelAccess<esp_hal::rmt::Tx, 0>, 1600> {
+    debug!("setup led");
+    let rmt: Rmt<'_, esp_hal::Async> = {
+        let frequency: Rate = Rate::from_mhz(80);
+        Rmt::new(rmt, frequency)
+    }
+    .expect("Failed to initialize RMT")
+    .into_async();
+
+    let rmt_channel = rmt.channel0;
+    let rmt_buffer = [0_u32; buffer_size_async(64)];
+
+    let mut led: SmartLedsAdapterAsync<_, 1600> =
+        SmartLedsAdapterAsync::new(rmt_channel, led_gpio, rmt_buffer);
+
+    led
+}

@@ -579,6 +579,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "embedded-sdmmc-dev"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ceec3a654b00a4acf9e2788d72b66fc3ba86d91b834586a4ed576324e351e38b"
+dependencies = [
+ "byteorder",
+ "embedded-hal 1.0.0",
+ "embedded-io",
+ "heapless",
+ "log",
+]
+
+[[package]]
 name = "embedded-storage"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -759,6 +772,16 @@ dependencies = [
  "quote",
  "syn 2.0.104",
  "termcolor",
+]
+
+[[package]]
+name = "esp-hal-smartled"
+version = "0.16.0"
+source = "git+https://github.com/esp-rs/esp-hal-community.git?branch=main#bbe8484a013267132cd3fb4693606de2c8317a53"
+dependencies = [
+ "document-features",
+ "esp-hal",
+ "smart-leds-trait",
 ]
 
 [[package]]
@@ -1025,17 +1048,21 @@ dependencies = [
  "embassy-net",
  "embassy-sync 0.7.0",
  "embassy-time",
+ "embedded-hal 1.0.0",
  "embedded-io",
  "embedded-io-async",
+ "embedded-sdmmc-dev",
  "esp-alloc",
  "esp-bootloader-esp-idf",
  "esp-hal",
  "esp-hal-embassy",
+ "esp-hal-smartled",
  "esp-println",
  "esp-wifi",
  "heapless",
  "log",
  "picoserve",
+ "smart-leds",
  "smoltcp",
  "static_cell",
 ]
@@ -1522,6 +1549,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "99d9a13982dcf210057a8a78572b2217b667c3beacbf3a0d8b454f6f82837d38"
 
 [[package]]
+name = "rgb"
+version = "0.8.52"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c6a884d2998352bb4daf0183589aec883f16a6da1f4dde84d8e2e9a5409a1ce"
+dependencies = [
+ "bytemuck",
+]
+
+[[package]]
 name = "riscv"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1641,6 +1677,24 @@ name = "smallvec"
 version = "1.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
+
+[[package]]
+name = "smart-leds"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "66df34e571fa9993fa6f99131a374d58ca3d694b75f9baac93458fe0d6057bf0"
+dependencies = [
+ "smart-leds-trait",
+]
+
+[[package]]
+name = "smart-leds-trait"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "edeb89c73244414bb0568611690dd095b2358b3fda5bae65ad784806cca00157"
+dependencies = [
+ "rgb",
+]
 
 [[package]]
 name = "smoltcp"
