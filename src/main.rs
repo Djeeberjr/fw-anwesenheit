@@ -30,7 +30,7 @@ type TallyPublisher = Publisher<'static, NoopRawMutex, TallyID, 8, 2, 1>;
 
 #[esp_hal_embassy::main]
 async fn main(mut spawner: Spawner) {
-    let (uart_device, stack, _i2c, buzzer_gpio) =
+    let (uart_device, stack, _i2c, _led, buzzer_gpio) =
         init::hardware::hardware_init(&mut spawner).await;
 
     wait_for_stack_up(stack).await;

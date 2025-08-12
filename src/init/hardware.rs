@@ -55,6 +55,9 @@ use crate::init::wifi;
  *
  *************************************************/
 
+const NUM_LEDS: usize  = 66;
+const LED_BUFFER_SIZE: usize = NUM_LEDS * 25;
+
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
     loop {
@@ -70,6 +73,7 @@ pub async fn hardware_init(
     Uart<'static, Async>,
     Stack<'static>,
     I2c<'static, Async>,
+    SmartLedsAdapterAsync<ConstChannelAccess<esp_hal::rmt::Tx, 0>, LED_BUFFER_SIZE>,
     GPIO21<'static>,
 ) {
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
@@ -112,18 +116,11 @@ pub async fn hardware_init(
 
     debug!("hardware init done");
 
-    let level = 100;
+    let level = 255;
 
-    let led_array: [RGB8; 66] = [RED, GREEN, BLUE, RED, GREEN, BLUE, RED, GREEN, BLUE, RED, GREEN, BLUE,
- RED, GREEN, BLUE, RED, GREEN, BLUE, RED, GREEN, BLUE, RED, GREEN, BLUE,
- RED, GREEN, BLUE, RED, GREEN, BLUE, RED, GREEN, BLUE, RED, GREEN, BLUE,
- RED, GREEN, BLUE, RED, GREEN, BLUE, RED, GREEN, BLUE, RED, GREEN, BLUE,
- RED, GREEN, BLUE, RED, GREEN, BLUE, RED, GREEN, BLUE, RED, GREEN, BLUE,
- RED, GREEN, BLUE, RED, BLUE, RED];
+    led.write(brightness([BLUE; NUM_LEDS].into_iter(), level)).await.unwrap();
 
-    led.write(brightness(led_array.into_iter(), level)).await.unwrap();
-
-    (uart_device, stack, i2c_device, buzzer_gpio)
+    (uart_device, stack, i2c_device, led, buzzer_gpio)
 }
 
 // Initialize the level shifter for the NFC reader and LED (output-enable (OE) input is low, all outputs are placed in the high-impedance (Hi-Z) state)
@@ -200,7 +197,7 @@ pub fn setup_buzzer(buzzer_gpio: GPIO21<'static>) -> Output<'static> {
 fn setup_led(
     rmt: RMT<'static>,
     led_gpio: GPIO1<'static>,
-) -> SmartLedsAdapterAsync<ConstChannelAccess<esp_hal::rmt::Tx, 0>, 1650> {
+) -> SmartLedsAdapterAsync<ConstChannelAccess<esp_hal::rmt::Tx, 0>, LED_BUFFER_SIZE> {
     debug!("setup led");
     let rmt: Rmt<'_, esp_hal::Async> = {
         let frequency: Rate = Rate::from_mhz(80);
@@ -210,9 +207,9 @@ fn setup_led(
     .into_async();
 
     let rmt_channel = rmt.channel0;
-    let rmt_buffer = [0_u32; buffer_size_async(66)];
+    let rmt_buffer = [0_u32; buffer_size_async(NUM_LEDS)];
 
-    let led: SmartLedsAdapterAsync<_, 1650> =
+    let led: SmartLedsAdapterAsync<_, LED_BUFFER_SIZE> =
         SmartLedsAdapterAsync::new(rmt_channel, led_gpio, rmt_buffer);
 
     led
