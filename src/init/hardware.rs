@@ -1,6 +1,6 @@
 use embassy_executor::Spawner;
 use embassy_net::Stack;
-use embassy_time::Duration;
+use embassy_time::{Duration, Timer};
 use embedded_sdmmc_dev::SdCard;
 use esp_hal::i2c::master::Config;
 use esp_hal::peripherals::{
@@ -94,6 +94,7 @@ pub async fn hardware_init(
     let interfaces = wifi::setup_wifi(timer1.timer0, rng, peripherals.WIFI, spawner);
     let stack = network::setup_network(network_seed, interfaces.ap, spawner);
 
+    Timer::after(Duration::from_millis(1)).await;
     init_lvl_shifter(peripherals.GPIO0);
 
     let uart_device = setup_uart(peripherals.UART1, peripherals.GPIO16, peripherals.GPIO17);
@@ -112,7 +113,9 @@ pub async fn hardware_init(
 
     let buzzer_gpio = peripherals.GPIO21;
 
-    let mut led = setup_led(peripherals.RMT, peripherals.GPIO1);
+    Timer::after(Duration::from_millis(500)).await;
+
+    let led = setup_led(peripherals.RMT, peripherals.GPIO1);
 
     debug!("hardware init done");
 
@@ -122,7 +125,7 @@ pub async fn hardware_init(
 // Initialize the level shifter for the NFC reader and LED (output-enable (OE) input is low, all outputs are placed in the high-impedance (Hi-Z) state)
 fn init_lvl_shifter(oe_pin: GPIO0<'static>) {
     let mut oe_lvl_shifter =
-        Output::new(oe_pin, esp_hal::gpio::Level::Low, OutputConfig::default());
+        Output::new(oe_pin, esp_hal::gpio::Level::Low, OutputConfig::default().with_drive_mode(esp_hal::gpio::DriveMode::PushPull).with_drive_strength(esp_hal::gpio::DriveStrength::_10mA));
     oe_lvl_shifter.set_high();
 }
 
