@@ -55,8 +55,8 @@ use crate::init::wifi;
  *
  *************************************************/
 
-const NUM_LEDS: usize  = 66;
-const LED_BUFFER_SIZE: usize = NUM_LEDS * 25;
+pub const NUM_LEDS: usize  = 66;
+pub const LED_BUFFER_SIZE: usize = NUM_LEDS * 25;
 
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
@@ -115,10 +115,6 @@ pub async fn hardware_init(
     let mut led = setup_led(peripherals.RMT, peripherals.GPIO1);
 
     debug!("hardware init done");
-
-    let level = 255;
-
-    led.write(brightness([BLUE; NUM_LEDS].into_iter(), level)).await.unwrap();
 
     (uart_device, stack, i2c_device, led, buzzer_gpio)
 }

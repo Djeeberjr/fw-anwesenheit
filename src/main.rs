@@ -53,7 +53,7 @@ async fn main(mut spawner: Spawner) {
     ));
 
     debug!("spawing feedback task..");
-    spawner.must_spawn(feedback::feedback_task(buzzer_gpio));
+    spawner.must_spawn(feedback::feedback_task(_led, buzzer_gpio));
     /******************************************************************************/
 
     let mut sub = chan.subscriber().unwrap();
