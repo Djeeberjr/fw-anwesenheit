@@ -41,7 +41,7 @@ use crate::init::wifi;
 /*************************************************
  * GPIO Pinout Xiao Esp32c6
  *
- * D0  -> GPIO0  -> Level Shifter OE
+ * D0  -> GPIO0  -> SD DECT
  * D1  -> GPIO1  -> Level Shifter A0 -> LED
  * D2  -> GPIO2  -> SPI/CS
  * D3  -> GPIO21 -> Buzzer
