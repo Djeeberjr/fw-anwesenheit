@@ -1,14 +1,15 @@
-extern crate alloc;
-
 use super::TallyID;
 use alloc::collections::BTreeMap;
 use alloc::string::String;
+use serde::Serialize;
 
+#[derive(Clone, Serialize)]
 pub struct Name {
     pub first: String,
     pub last: String,
 }
 
+#[derive(Clone, Serialize)]
 pub struct IDMapping {
     id_map: BTreeMap<TallyID, Name>,
 }
@@ -28,4 +29,3 @@ impl IDMapping {
         self.id_map.insert(id, name);
     }
 }
-

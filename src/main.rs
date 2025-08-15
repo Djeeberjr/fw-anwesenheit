@@ -17,6 +17,8 @@ use static_cell::make_static;
 
 use crate::{store::TallyID, webserver::start_webserver};
 
+extern crate alloc;
+
 mod drivers;
 mod feedback;
 mod init;

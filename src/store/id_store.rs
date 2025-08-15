@@ -1,11 +1,10 @@
-extern crate alloc;
-
 use super::Date;
 use super::IDMapping;
 use super::TallyID;
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 
+#[derive(Clone)]
 pub struct AttendanceDay {
     date: Date,
     ids: Vec<TallyID>,
@@ -30,9 +29,10 @@ impl AttendanceDay {
     }
 }
 
+#[derive(Clone)]
 pub struct IDStore {
-    days: BTreeMap<Date, AttendanceDay>,
-    mapping: IDMapping,
+    pub days: BTreeMap<Date, AttendanceDay>,
+    pub mapping: IDMapping,
 }
 
 impl IDStore {
