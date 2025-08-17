@@ -21,6 +21,8 @@ pub enum FeedbackState {
 
 const LED_LEVEL: u8 = 255;
 
+//TODO ERROR STATE: 1 Blink = unknows error,  3 Blink = no sd card 
+
 #[embassy_executor::task]
 pub async fn feedback_task(mut led: SmartLedsAdapterAsync<ConstChannelAccess<esp_hal::rmt::Tx, 0>, { init::hardware::LED_BUFFER_SIZE }>, buzzer: peripherals::GPIO21<'static>) {
     debug!("Starting feedback task");
