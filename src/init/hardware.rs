@@ -1,3 +1,4 @@
+use bleps::att::Att;
 use embassy_executor::Spawner;
 use embassy_net::Stack;
 
@@ -8,9 +9,7 @@ use esp_hal::peripherals::{
     UART1,
 };
 use esp_hal::rmt::{ConstChannelAccess, Rmt};
-use esp_hal::spi::{
-    master::{Config as Spi_config, Spi},
-};
+use esp_hal::spi::master::{Config as Spi_config, Spi};
 
 use esp_hal::Blocking;
 use esp_hal::time::Rate;
@@ -24,12 +23,15 @@ use esp_hal::{
     uart::Uart,
 };
 use esp_hal_smartled::{SmartLedsAdapterAsync, buffer_size_async};
+use esp_println::dbg;
 use esp_println::logger::init_logger;
-use log::{debug, error};
+use log::{debug, error, info};
 
 use crate::init::network;
 use crate::init::sd_card::setup_sdcard;
 use crate::init::wifi;
+use crate::store::AttendanceDay;
+use crate::store::persistence::Persistence;
 
 /*************************************************
  * GPIO Pinout Xiao Esp32c6
@@ -44,7 +46,7 @@ use crate::init::wifi;
  * D7  -> GPIO17 -> UART/RX -> Level Shifter A1 -> NFC Reader
  * D8  -> GPIO19 -> SPI/SCLK
  * D9  -> GPIO20 -> SPI/MISO
- * D10 -> GPIO10 -> SPI/MOSI
+ * D10 -> GPIO18 -> SPI/MOSI
  *
  *************************************************/
 
@@ -107,7 +109,7 @@ pub async fn hardware_init(
         OutputConfig::default(),
     );
 
-    let vol_mgr = setup_sdcard(spi_bus, sd_cs_pin);
+    let mut vol_mgr = setup_sdcard(spi_bus, sd_cs_pin);
 
     let buzzer_gpio = peripherals.GPIO21;
 

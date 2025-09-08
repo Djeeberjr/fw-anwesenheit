@@ -15,7 +15,7 @@ use embassy_time::{Duration, Timer};
 use log::{debug, info};
 use static_cell::make_static;
 
-use crate::{store::TallyID, webserver::start_webserver};
+use crate::{store::TallyID};
 
 extern crate alloc;
 
@@ -23,7 +23,7 @@ mod drivers;
 mod feedback;
 mod init;
 mod store;
-mod webserver;
+//mod webserver;
 
 static FEEDBACK_STATE: Signal<CriticalSectionRawMutex, feedback::FeedbackState> = Signal::new();
 

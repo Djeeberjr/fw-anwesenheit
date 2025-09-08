@@ -43,20 +43,28 @@ impl Persistence for SDCardPersistence {
         let mut vol_0 = self.vol_mgr.open_volume(VolumeIdx(0)).unwrap();
         let mut root_dir = vol_0.open_root_dir().unwrap();
         let mut file = root_dir
-            .open_file_in_dir("days/TODO", embedded_sdmmc::Mode::ReadOnly)
+            .open_file_in_dir("day.jsn", embedded_sdmmc::Mode::ReadOnly)
             .unwrap();
 
         let mut read_buffer: [u8; 1024] = [0; 1024];
         let read = file.read(&mut read_buffer).unwrap();
         file.close().unwrap();
 
-        let day: AttendanceDay = serde_json::from_slice(&read_buffer).unwrap();
+        let day: AttendanceDay = serde_json::from_slice(&read_buffer[..read]).unwrap();
 
         Some(day)
     }
 
     async fn save_day(&mut self, day: Date, data: &AttendanceDay) {
-        todo!()
+        let mut vol_0 = self.vol_mgr.open_volume(VolumeIdx(0)).unwrap();
+        let mut root_dir = vol_0.open_root_dir().unwrap();
+
+        let mut file = root_dir
+            .open_file_in_dir("day.jsn", embedded_sdmmc::Mode::ReadWriteCreateOrTruncate)
+            .unwrap();
+        file.write(&serde_json::to_vec(data).unwrap()).unwrap();
+        file.flush();
+        file.close();
     }
 
     async fn load_mapping(&mut self) -> Option<crate::store::IDMapping> {

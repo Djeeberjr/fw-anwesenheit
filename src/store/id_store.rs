@@ -5,15 +5,16 @@ use super::IDMapping;
 use super::TallyID;
 use alloc::vec::Vec;
 use serde::Deserialize;
+use serde::Serialize;
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct AttendanceDay {
     date: Date,
     ids: Vec<TallyID>,
 }
 
 impl AttendanceDay {
-    fn new(date: Date) -> Self {
+   pub fn new(date: Date) -> Self {
         Self {
             date,
             ids: Vec::new(),
