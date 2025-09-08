@@ -1,10 +1,12 @@
+use crate::store::persistence::Persistence;
+
 use super::Date;
 use super::IDMapping;
 use super::TallyID;
-use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
+use serde::Deserialize;
 
-#[derive(Clone)]
+#[derive(Clone, Deserialize)]
 pub struct AttendanceDay {
     date: Date,
     ids: Vec<TallyID>,
@@ -30,42 +32,63 @@ impl AttendanceDay {
 }
 
 #[derive(Clone)]
-pub struct IDStore {
-    pub days: BTreeMap<Date, AttendanceDay>,
+pub struct IDStore<T: Persistence> {
+    pub current_day: AttendanceDay,
     pub mapping: IDMapping,
+    persistence_layer: T,
 }
 
-impl IDStore {
-    pub fn new() -> Self {
-        IDStore {
-            days: BTreeMap::new(),
-            mapping: IDMapping::new(),
+impl<T: Persistence> IDStore<T> {
+    pub async fn new_from_storage(mut persistence_layer: T) -> Self {
+        let mapping = match persistence_layer.load_mapping().await {
+            Some(map) => map,
+            None => IDMapping::new(),
+        };
+
+        let current_date: Date = 1;
+
+        let day = persistence_layer
+            .load_day(current_date)
+            .await
+            .unwrap_or(AttendanceDay::new(current_date));
+
+        Self {
+            current_day: day,
+            mapping,
+            persistence_layer,
         }
     }
 
-    pub fn new_from_storage() -> Self {
-        // TODO: implement
-        todo!()
+    async fn persist_day(&mut self) {
+        self.persistence_layer
+            .save_day(self.current_day.date, &self.current_day)
+            .await
+    }
+
+    async fn persist_mapping(&mut self) {
+        self.persistence_layer.save_mapping(&self.mapping).await
     }
 
     /// Add a new id for the current day
     /// Returns false if ID is already present at the current day.
-    pub fn add_id(&mut self, id: TallyID) -> bool {
-        self.get_current_day().add_id(id)
-    }
+    pub async fn add_id(&mut self, id: TallyID) -> bool {
+        let current_date: Date = 1;
 
-    /// Get the `AttendanceDay` of the current day
-    /// Creates a new if not exists
-    pub fn get_current_day(&mut self) -> &mut AttendanceDay {
-        let current_day: Date = 1;
-
-        if self.days.contains_key(&current_day) {
-            return self.days.get_mut(&current_day).unwrap();
+        if self.current_day.date == current_date {
+            let changed = self.current_day.add_id(id);
+            if changed {
+                self.persist_day().await;
+            }
+            return changed;
         }
 
-        self.days
-            .insert(current_day, AttendanceDay::new(current_day));
+        let new_day = AttendanceDay::new(current_date);
+        self.current_day = new_day;
 
-        self.days.get_mut(&current_day.clone()).unwrap()
+        let changed = self.current_day.add_id(id);
+        if changed {
+            self.persist_day().await;
+        }
+        changed
     }
 }

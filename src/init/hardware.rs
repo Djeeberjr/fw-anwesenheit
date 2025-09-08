@@ -1,18 +1,18 @@
 use embassy_executor::Spawner;
 use embassy_net::Stack;
+
 use embassy_time::{Duration, Timer};
-use embedded_sdmmc_dev::SdCard;
 use esp_hal::i2c::master::Config;
 use esp_hal::peripherals::{
-    self, GPIO0, GPIO1, GPIO2, GPIO10, GPIO16, GPIO17, GPIO18, GPIO19, GPIO20, GPIO21, GPIO22,
-    GPIO23, I2C0, RMT, SPI2, UART1,
+    GPIO0, GPIO1, GPIO16, GPIO17, GPIO18, GPIO19, GPIO20, GPIO21, GPIO22, GPIO23, I2C0, RMT, SPI2,
+    UART1,
 };
-use esp_hal::rmt::{ConstChannelAccess, Rmt, Tx};
+use esp_hal::rmt::{ConstChannelAccess, Rmt};
 use esp_hal::spi::{
-    Mode,
     master::{Config as Spi_config, Spi},
 };
 
+use esp_hal::Blocking;
 use esp_hal::time::Rate;
 use esp_hal::timer::timg::TimerGroup;
 use esp_hal::{
@@ -23,19 +23,12 @@ use esp_hal::{
     timer::systimer::SystemTimer,
     uart::Uart,
 };
-
 use esp_hal_smartled::{SmartLedsAdapterAsync, buffer_size_async};
-
-use smart_leds::colors::{BLUE, GREEN, RED};
-use smart_leds::{
-    RGB8, SmartLedsWriteAsync, brightness, gamma,
-    hsv::{Hsv, hsv2rgb},
-};
-
 use esp_println::logger::init_logger;
 use log::{debug, error};
 
 use crate::init::network;
+use crate::init::sd_card::setup_sdcard;
 use crate::init::wifi;
 
 /*************************************************
@@ -55,7 +48,7 @@ use crate::init::wifi;
  *
  *************************************************/
 
-pub const NUM_LEDS: usize  = 66;
+pub const NUM_LEDS: usize = 66;
 pub const LED_BUFFER_SIZE: usize = NUM_LEDS * 25;
 
 #[panic_handler]
@@ -101,15 +94,20 @@ pub async fn hardware_init(
 
     let i2c_device = setup_i2c(peripherals.I2C0, peripherals.GPIO22, peripherals.GPIO23);
 
-    let spi_device = setup_spi(
+    let spi_bus = setup_spi(
         peripherals.SPI2,
         peripherals.GPIO19,
         peripherals.GPIO20,
         peripherals.GPIO18,
-        peripherals.GPIO2,
     );
 
-    let sd_card = setup_sdcard(spi_device);
+    let sd_cs_pin = Output::new(
+        peripherals.GPIO2,
+        esp_hal::gpio::Level::High,
+        OutputConfig::default(),
+    );
+
+    let vol_mgr = setup_sdcard(spi_bus, sd_cs_pin);
 
     let buzzer_gpio = peripherals.GPIO21;
 
@@ -124,8 +122,13 @@ pub async fn hardware_init(
 
 // Initialize the level shifter for the NFC reader and LED (output-enable (OE) input is low, all outputs are placed in the high-impedance (Hi-Z) state)
 fn init_lvl_shifter(oe_pin: GPIO0<'static>) {
-    let mut oe_lvl_shifter =
-        Output::new(oe_pin, esp_hal::gpio::Level::Low, OutputConfig::default().with_drive_mode(esp_hal::gpio::DriveMode::PushPull).with_drive_strength(esp_hal::gpio::DriveStrength::_10mA));
+    let mut oe_lvl_shifter = Output::new(
+        oe_pin,
+        esp_hal::gpio::Level::Low,
+        OutputConfig::default()
+            .with_drive_mode(esp_hal::gpio::DriveMode::PushPull)
+            .with_drive_strength(esp_hal::gpio::DriveStrength::_10mA),
+    );
     oe_lvl_shifter.set_high();
 }
 
@@ -167,22 +170,12 @@ fn setup_spi(
     sck: GPIO19<'static>,
     miso: GPIO20<'static>,
     mosi: GPIO18<'static>,
-    cs: GPIO2<'static>,
-) -> Spi<'static, Async> {
+) -> Spi<'static, Blocking> {
     let spi = match Spi::new(spi2, Spi_config::default()) {
-        Ok(spi) => spi
-            .with_sck(sck)
-            .with_miso(miso)
-            .with_mosi(mosi)
-            .with_cs(cs)
-            .into_async(),
+        Ok(spi) => spi.with_sck(sck).with_miso(miso).with_mosi(mosi),
         Err(e) => panic!("Failed to initialize SPI: {:?}", e),
     };
     spi
-}
-
-fn setup_sdcard(spi_device: Spi<'static, Async>) {
-    //let sdcard = SdCard::new(spi_device as embedded_hal::spi::SpiDevice(), delayer)
 }
 
 pub fn setup_buzzer(buzzer_gpio: GPIO21<'static>) -> Output<'static> {

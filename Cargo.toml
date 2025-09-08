@@ -63,10 +63,12 @@ embassy-sync = { version = "0.7.0", features = ["log"] }
 ds3231 = { version = "0.3.0", features = ["async", "temperature_f32"] }
 chrono = { version = "0.4.41", default-features = false } 
 dir-embed = "0.3.0"
-embedded-sdmmc-dev = "0.8.2"
 esp-hal-smartled = { git = "https://github.com/esp-rs/esp-hal-community.git", package = "esp-hal-smartled", branch = "main", features = ["esp32c6"]}
 smart-leds = "0.4.0"
 serde = { version = "1.0.219", default-features = false, features = ["derive", "alloc"] }
+embedded-sdmmc = "0.8.0"
+embedded-hal-bus = "0.3.0"
+serde_json = { version = "1.0.143", default-features = false, features = ["alloc"]}
 
 [profile.dev]
 # Rust debug is too slow.
