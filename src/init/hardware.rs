@@ -1,9 +1,15 @@
+use core::cell::RefCell;
+
 use bleps::att::Att;
+use critical_section::Mutex;
+use ds3231::InterruptControl;
 use embassy_executor::Spawner;
 use embassy_net::Stack;
 
 use embassy_time::{Duration, Timer};
+use esp_hal::gpio::{Input, InputConfig, Io};
 use esp_hal::i2c::master::Config;
+use esp_hal::interrupt::InterruptHandler;
 use esp_hal::peripherals::{
     GPIO0, GPIO1, GPIO16, GPIO17, GPIO18, GPIO19, GPIO20, GPIO21, GPIO22, GPIO23, I2C0, RMT, SPI2,
     UART1,
@@ -11,7 +17,7 @@ use esp_hal::peripherals::{
 use esp_hal::rmt::{ConstChannelAccess, Rmt};
 use esp_hal::spi::master::{Config as Spi_config, Spi};
 
-use esp_hal::Blocking;
+use esp_hal::{Blocking, handler};
 use esp_hal::time::Rate;
 use esp_hal::timer::timg::TimerGroup;
 use esp_hal::{
@@ -22,11 +28,13 @@ use esp_hal::{
     timer::systimer::SystemTimer,
     uart::Uart,
 };
+use esp_hal_embassy::InterruptExecutor;
 use esp_hal_smartled::{SmartLedsAdapterAsync, buffer_size_async};
 use esp_println::dbg;
 use esp_println::logger::init_logger;
 use log::{debug, error, info};
 
+use crate::FEEDBACK_STATE;
 use crate::init::network;
 use crate::init::sd_card::setup_sdcard;
 use crate::init::wifi;
@@ -52,6 +60,8 @@ use crate::store::persistence::Persistence;
 
 pub const NUM_LEDS: usize = 66;
 pub const LED_BUFFER_SIZE: usize = NUM_LEDS * 25;
+
+static SD_DET: Mutex<RefCell<Option<Input>>> = Mutex::new(RefCell::new(None));
 
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
@@ -90,11 +100,22 @@ pub async fn hardware_init(
     let stack = network::setup_network(network_seed, interfaces.ap, spawner);
 
     Timer::after(Duration::from_millis(1)).await;
-    init_lvl_shifter(peripherals.GPIO0);
 
     let uart_device = setup_uart(peripherals.UART1, peripherals.GPIO16, peripherals.GPIO17);
 
     let i2c_device = setup_i2c(peripherals.I2C0, peripherals.GPIO22, peripherals.GPIO23);
+
+    let mut io = Io::new(peripherals.IO_MUX);
+    io.set_interrupt_handler(handler);
+    let mut sd_det = Input::new(peripherals.GPIO0, InputConfig::default());
+    critical_section::with(|cs| {
+    // Here we are listening for a low level to demonstrate
+    // that you need to stop listening for level interrupts,
+    // but usually you'd probably use `FallingEdge`.
+    sd_det.listen(esp_hal::gpio::Event::AnyEdge);
+    SD_DET.borrow_ref_mut(cs).replace(sd_det);
+});
+
 
     let spi_bus = setup_spi(
         peripherals.SPI2,
@@ -122,17 +143,6 @@ pub async fn hardware_init(
     (uart_device, stack, i2c_device, led, buzzer_gpio)
 }
 
-// Initialize the level shifter for the NFC reader and LED (output-enable (OE) input is low, all outputs are placed in the high-impedance (Hi-Z) state)
-fn init_lvl_shifter(oe_pin: GPIO0<'static>) {
-    let mut oe_lvl_shifter = Output::new(
-        oe_pin,
-        esp_hal::gpio::Level::Low,
-        OutputConfig::default()
-            .with_drive_mode(esp_hal::gpio::DriveMode::PushPull)
-            .with_drive_strength(esp_hal::gpio::DriveStrength::_10mA),
-    );
-    oe_lvl_shifter.set_high();
-}
 
 fn setup_uart(
     uart1: UART1<'static>,
@@ -207,4 +217,35 @@ fn setup_led(
         SmartLedsAdapterAsync::new(rmt_channel, led_gpio, rmt_buffer);
 
     led
+}
+
+
+#[handler]
+fn handler() {
+    critical_section::with(|cs| {
+        let mut sd_det = SD_DET.borrow_ref_mut(cs);
+        let Some(sd_det) = sd_det.as_mut() else {
+            // Some other interrupt has occurred
+            // before the button was set up.
+            return;
+        };
+
+        if sd_det.is_interrupt_set() {
+            //card is insert on high 
+            if  sd_det.is_high() {
+                debug!("card insert");
+                //FEEDBACK_STATE.signal(crate::feedback::FeedbackState::Ack);
+            //sd_det.unlisten();
+                //sd_det.listen(esp_hal::gpio::Event::FallingEdge);
+                
+            }
+            //card is not insert on low
+            else  {
+                debug!("card removed");
+                //FEEDBACK_STATE.signal(crate::feedback::FeedbackState::Nack);
+                //sd_det.unlisten();
+                sd_det.listen(esp_hal::gpio::Event::RisingEdge);
+            }
+        }
+    });
 }

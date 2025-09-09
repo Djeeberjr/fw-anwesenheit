@@ -12,7 +12,7 @@ use crate::{FEEDBACK_STATE, init};
 #[derive(Copy, Clone, Debug)]
 pub enum FeedbackState {
     Ack,
-    Nak,
+    Nack,
     Error,
     Startup,
     WIFI,
@@ -37,7 +37,7 @@ pub async fn feedback_task(mut led: SmartLedsAdapterAsync<ConstChannelAccess<esp
                 buzzer.set_low();
                 Timer::after(Duration::from_millis(50)).await;
             }
-            FeedbackState::Nak => {
+            FeedbackState::Nack => {
                 led.write(brightness([YELLOW; init::hardware::NUM_LEDS].into_iter(),  LED_LEVEL)).await.unwrap();
                 buzzer.set_high();
                 Timer::after(Duration::from_millis(100)).await;
@@ -77,7 +77,7 @@ pub async fn feedback_task(mut led: SmartLedsAdapterAsync<ConstChannelAccess<esp
                 led.write(brightness([BLUE; init::hardware::NUM_LEDS].into_iter(),  LED_LEVEL)).await.unwrap();
             }
             FeedbackState::Idle => {
-                // Do nothing
+                led.write(brightness([GREEN; init::hardware::NUM_LEDS].into_iter(),  LED_LEVEL)).await.unwrap();
             }
         };
         debug!("Feedback state: {:?}", feedback_state);
