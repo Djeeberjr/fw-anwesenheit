@@ -6,16 +6,21 @@
 use embassy_executor::Spawner;
 use embassy_net::Stack;
 use embassy_sync::{
-    blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex}, channel::Channel, pubsub::{
+    blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex},
+    channel::Channel,
+    pubsub::{
         PubSubChannel, Publisher,
         WaitResult::{Lagged, Message},
-    }, signal::Signal
+    },
+    signal::Signal,
 };
 use embassy_time::{Duration, Timer};
+use esp_hal::gpio::Input;
+use esp_hal::{gpio::InputConfig, peripherals};
 use log::{debug, info};
 use static_cell::make_static;
 
-use crate::{store::TallyID};
+use crate::store::TallyID;
 
 extern crate alloc;
 
@@ -32,7 +37,7 @@ type TallyPublisher = Publisher<'static, NoopRawMutex, TallyID, 8, 2, 1>;
 
 #[esp_hal_embassy::main]
 async fn main(mut spawner: Spawner) {
-    let (uart_device, stack, _i2c, _led, buzzer_gpio) =
+    let (uart_device, stack, _i2c, _led, buzzer_gpio, sd_det_gpio) =
         init::hardware::hardware_init(&mut spawner).await;
 
     wait_for_stack_up(stack).await;
@@ -56,6 +61,9 @@ async fn main(mut spawner: Spawner) {
 
     debug!("spawing feedback task..");
     spawner.must_spawn(feedback::feedback_task(_led, buzzer_gpio));
+
+    debug!("spawn sd detect task");
+    spawner.must_spawn(sd_detect_task(sd_det_gpio));
     /******************************************************************************/
 
     let mut sub = chan.subscriber().unwrap();
@@ -73,6 +81,29 @@ async fn main(mut spawner: Spawner) {
         //     Lagged(_) => debug!("Lagged"),
         //     Message(msg) => debug!("Got message: {msg:?}"),
         // }
+    }
+}
+
+#[embassy_executor::task]
+async fn sd_detect_task(sd_det_gpio: peripherals::GPIO0<'static>) {
+    let mut sd_det = Input::new(sd_det_gpio, InputConfig::default());
+    sd_det.wait_for(esp_hal::gpio::Event::AnyEdge);
+
+    loop {
+        sd_det.wait_for_any_edge().await;
+        {
+            if sd_det.is_high() {
+                FEEDBACK_STATE.signal(feedback::FeedbackState::Ack);
+                debug!("card insert");
+            }
+            //card is not insert on low
+            else {
+                FEEDBACK_STATE.signal(feedback::FeedbackState::Nack);
+                debug!("card removed");
+            }
+        }
+        //debounce time
+        Timer::after(Duration::from_millis(100)).await;
     }
 }
 
