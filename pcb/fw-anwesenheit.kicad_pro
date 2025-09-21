@@ -504,7 +504,7 @@
       "plot": "production/",
       "pos_files": "",
       "specctra_dsn": "",
-      "step": "fw-anwesenheit.stl",
+      "step": "fw-anwesenheit.step",
       "svg": "",
       "vrml": ""
     },
