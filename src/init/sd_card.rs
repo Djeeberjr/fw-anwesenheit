@@ -42,13 +42,16 @@ impl Persistence for SDCardPersistence {
     async fn load_day(&mut self, day: crate::store::Date) -> Option<AttendanceDay> {
         let mut vol_0 = self.vol_mgr.open_volume(VolumeIdx(0)).unwrap();
         let mut root_dir = vol_0.open_root_dir().unwrap();
-        let mut file = root_dir
-            .open_file_in_dir("day.jsn", embedded_sdmmc::Mode::ReadOnly)
-            .unwrap();
+        let mut file = root_dir.open_file_in_dir("day.jsn", embedded_sdmmc::Mode::ReadOnly);
+
+        if let Err(e) = file {
+            return None;
+        }
+        let mut open_file = file.unwrap();
 
         let mut read_buffer: [u8; 1024] = [0; 1024];
-        let read = file.read(&mut read_buffer).unwrap();
-        file.close().unwrap();
+        let read = open_file.read(&mut read_buffer).unwrap();
+        open_file.close().unwrap();
 
         let day: AttendanceDay = serde_json::from_slice(&read_buffer[..read]).unwrap();
 
