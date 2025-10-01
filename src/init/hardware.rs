@@ -34,7 +34,7 @@ use log::{debug, error, info};
 
 use crate::FEEDBACK_STATE;
 use crate::init::network;
-use crate::init::sd_card::setup_sdcard;
+use crate::init::sd_card::{setup_sdcard, SDCardPersistence};
 use crate::init::wifi;
 use crate::store::AttendanceDay;
 use crate::store::persistence::Persistence;
@@ -79,6 +79,7 @@ pub async fn hardware_init(
     SmartLedsAdapterAsync<ConstChannelAccess<esp_hal::rmt::Tx, 0>, LED_BUFFER_SIZE>,
     GPIO21<'static>,
     GPIO0<'static>,
+    SDCardPersistence,
 ) {
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
@@ -104,7 +105,7 @@ pub async fn hardware_init(
 
     let i2c_device = setup_i2c(peripherals.I2C0, peripherals.GPIO22, peripherals.GPIO23);
 
-    let mut sd_det_gpio = peripherals.GPIO0;
+    let sd_det_gpio = peripherals.GPIO0;
 
     let spi_bus = setup_spi(
         peripherals.SPI2,
@@ -119,7 +120,7 @@ pub async fn hardware_init(
         OutputConfig::default(),
     );
 
-    let mut vol_mgr = setup_sdcard(spi_bus, sd_cs_pin);
+    let vol_mgr = setup_sdcard(spi_bus, sd_cs_pin);
 
     let buzzer_gpio = peripherals.GPIO21;
 
@@ -136,6 +137,7 @@ pub async fn hardware_init(
         led,
         buzzer_gpio,
         sd_det_gpio,
+        vol_mgr,
     )
 }
 
