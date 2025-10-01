@@ -2,7 +2,7 @@ use embassy_time::{Duration, Timer};
 use esp_hal::{Async, uart::Uart};
 use log::{debug, info};
 
-use crate::TallyPublisher;
+use crate::{TallyPublisher, store::TallyID};
 
 #[embassy_executor::task]
 pub async fn rfid_reader_task(mut uart_device: Uart<'static, Async>, chan: TallyPublisher) {
@@ -17,7 +17,7 @@ pub async fn rfid_reader_task(mut uart_device: Uart<'static, Async>, chan: Tally
                     core::fmt::Write::write_fmt(&mut hex_str, format_args!("{:02X} ", byte)).ok();
                 }
                 info!("Read {n} bytes from UART: {hex_str}");
-                chan.publish([1, 0, 2, 5, 0, 8, 12, 15]).await;
+                chan.publish(uart_buffer[..8].try_into().unwrap()).await;
             }
             Err(e) => {
                 log::error!("Error reading from UART: {e}");
