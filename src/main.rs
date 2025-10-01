@@ -20,7 +20,7 @@ use esp_hal::{gpio::InputConfig, peripherals};
 use log::{debug, info};
 use static_cell::make_static;
 
-use crate::store::TallyID;
+use crate::store::{IDStore, TallyID};
 
 extern crate alloc;
 
@@ -71,16 +71,22 @@ async fn main(mut spawner: Spawner) {
     debug!("everything spawned");
     FEEDBACK_STATE.signal(feedback::FeedbackState::Startup);
 
-    loop {
-        rtc.get_time().await;
-        info!("Current RTC time: {}", rtc.get_time().await);
-        Timer::after(Duration::from_millis(1000)).await;
+    let mut store = IDStore::new_from_storage(persistence_layer).await;
 
-        // let wait_result = sub.next_message().await;
-        // match wait_result {
-        //     Lagged(_) => debug!("Lagged"),
-        //     Message(msg) => debug!("Got message: {msg:?}"),
-        // }
+    loop {
+        let wait_result = sub.next_message().await;
+        match wait_result {
+            Lagged(_) => debug!("Lagged"),
+            Message(msg) => {
+                debug!("Got message: {msg:?}");
+
+                let added = store.add_id(msg).await;
+
+                if added {
+                    FEEDBACK_STATE.signal(feedback::FeedbackState::Ack);
+                }
+            }
+        }
     }
 }
 
