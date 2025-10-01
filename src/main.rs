@@ -87,7 +87,7 @@ async fn main(mut spawner: Spawner) {
 #[embassy_executor::task]
 async fn sd_detect_task(sd_det_gpio: peripherals::GPIO0<'static>) {
     let mut sd_det = Input::new(sd_det_gpio, InputConfig::default());
-    sd_det.wait_for(esp_hal::gpio::Event::AnyEdge);
+    sd_det.wait_for(esp_hal::gpio::Event::AnyEdge).await;
 
     loop {
         sd_det.wait_for_any_edge().await;
