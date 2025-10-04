@@ -8,12 +8,16 @@ use esp_hal::{
 };
 use log::{debug, error, info};
 
-use crate::{FEEDBACK_STATE, drivers, feedback};
+use crate::{FEEDBACK_STATE, drivers, feedback, store::Date};
 use chrono::{TimeZone, Utc};
 
 include!(concat!(env!("OUT_DIR"), "/build_time.rs"));
 
 const RTC_ADDRESS: u8 = 0x68;
+
+const SECS_PER_DAY: u64 = 86_400;
+const UNIX_OFFSET_DAYS: u64 = 719_163; // Days from 0000-03-01 to 1970-01-01
+const UTC_PLUS_ONE: u64 = 3600;
 
 pub struct RTCClock {
     dev: DS3231<I2c<'static, Async>>,
@@ -41,7 +45,60 @@ impl RTCClock {
             }
         }
     }
+
+    pub async fn get_date(&mut self) -> Date {
+        let (year, month, day) = unix_to_ymd_string(self.get_time().await);
+
+        let mut buffer: Date = [0; 10] ;
+
+        // Write YYYY
+        buffer[0] = b'0' + ((year / 1000) % 10) as u8;
+        buffer[1] = b'0' + ((year / 100) % 10) as u8;
+        buffer[2] = b'0' + ((year / 10) % 10) as u8;
+        buffer[3] = b'0' + (year % 10) as u8;
+        buffer[4] = b'.';
+
+        // Write MM
+        buffer[5] = b'0' + (month / 10) as u8;
+        buffer[6] = b'0' + (month % 10) as u8;
+
+        buffer[7] = b'.';
+
+        // Write DD
+        buffer[8] = b'0' + (day / 10) as u8;
+        buffer[9] = b'0' + (day % 10) as u8;
+
+        buffer
+    }
+
 }
+
+fn unix_to_ymd_string(timestamp: u64) -> (u16, u8, u8) {
+        // Apply UTC+1 offset
+        let ts = timestamp + UTC_PLUS_ONE;
+
+        // Convert to total days since UNIX epoch
+        let days_since_epoch = ts / SECS_PER_DAY;
+
+        // Convert to proleptic Gregorian date
+        civil_from_days(days_since_epoch as i64 + UNIX_OFFSET_DAYS as i64)
+    }
+
+    // This function returns (year, month, day).
+    // Based on the algorithm by Howard Hinnant.
+    fn civil_from_days(z: i64) -> (u16, u8, u8) {
+        let mut z = z;
+        z -= 60; // shift epoch for algorithm
+        let era = (z >= 0).then_some(z).unwrap_or(z - 146096) / 146097;
+        let doe = z - era * 146097; // [0, 146096]
+        let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365; // [0, 399]
+        let y = yoe + era * 400;
+        let doy = doe - (365 * yoe + yoe / 4 - yoe / 100); // [0, 365]
+        let mp = (5 * doy + 2) / 153; // [0, 11]
+        let d = doy - (153 * mp + 2) / 5 + 1; // [1, 31]
+        let m = mp + (if mp < 10 { 3 } else { -9 }); // [1, 12]
+        ((y + (m <= 2) as i64) as u16, m as u8, d as u8)
+    }
 
 pub async fn rtc_config(i2c: I2c<'static, Async>) -> DS3231<I2c<'static, Async>> {
     let mut rtc: DS3231<I2c<'static, Async>> = DS3231::new(i2c, RTC_ADDRESS);
@@ -62,8 +119,9 @@ pub async fn rtc_config(i2c: I2c<'static, Async>) -> DS3231<I2c<'static, Async>>
     match rtc.configure(&rtc_config).await {
         Ok(_) => info!("DS3231 configured successfully"),
         Err(e) => {
-            info!("Failed to configure DS3231: {:?}", e);
-            panic!("DS3231 configuration failed");
+            error!("Failed to configure DS3231: {:?}", e);
+            error!("DS3231 configuration failed");
+            FEEDBACK_STATE.signal(feedback::FeedbackState::Error);
         }
     }
 

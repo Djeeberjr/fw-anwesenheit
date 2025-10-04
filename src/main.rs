@@ -20,7 +20,7 @@ use esp_hal::{gpio::InputConfig, peripherals};
 use log::{debug, info};
 use static_cell::make_static;
 
-use crate::store::{IDStore, TallyID};
+use crate::store::{Date, IDStore, TallyID};
 
 extern crate alloc;
 
@@ -80,7 +80,8 @@ async fn main(mut spawner: Spawner) {
             Message(msg) => {
                 debug!("Got message: {msg:?}");
 
-                let added = store.add_id(msg).await;
+                let day: Date = rtc.get_date().await;
+                let added = store.add_id(msg, day).await;
 
                 if added {
                     FEEDBACK_STATE.signal(feedback::FeedbackState::Ack);
