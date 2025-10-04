@@ -83,10 +83,10 @@ impl Persistence for SDCardPersistence {
         let mut root_dir = vol_0.open_root_dir().unwrap();
         let mut days_dir = root_dir.open_dir("days").unwrap();
 
-        let mut days = Vec::new();
+        let mut days: Vec<[u8; 10]> = Vec::new();
         days_dir
             .iterate_dir(|e| {
-                days.push(1);
+                days.push([0; 10]);
             })
             .unwrap();
 

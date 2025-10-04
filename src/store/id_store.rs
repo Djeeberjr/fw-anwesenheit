@@ -1,3 +1,5 @@
+use crate::drivers::rtc;
+use crate::drivers::rtc::RTCClock;
 use crate::store::persistence::Persistence;
 
 use super::Date;
@@ -45,8 +47,8 @@ impl<T: Persistence> IDStore<T> {
         //     Some(map) => map,
         //     None => IDMapping::new(),
         // };
-
-        let current_date: Date = 1;
+ 
+        let current_date: Date = [0; 10];
 
         let day = persistence_layer
             .load_day(current_date)
@@ -72,8 +74,7 @@ impl<T: Persistence> IDStore<T> {
 
     /// Add a new id for the current day
     /// Returns false if ID is already present at the current day.
-    pub async fn add_id(&mut self, id: TallyID) -> bool {
-        let current_date: Date = 1;
+    pub async fn add_id(&mut self, id: TallyID, current_date: Date) -> bool {
 
         if self.current_day.date == current_date {
             let changed = self.current_day.add_id(id);
