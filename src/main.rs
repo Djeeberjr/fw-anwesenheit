@@ -60,7 +60,7 @@ async fn main(mut spawner: Spawner) {
 
     wait_for_stack_up(stack).await;
 
-    start_webserver(&mut spawner, stack, shared_store.clone());
+    start_webserver(&mut spawner, stack, shared_store.clone(), chan);
 
     /****************************** Spawning tasks ***********************************/
     debug!("spawing NFC reader task...");

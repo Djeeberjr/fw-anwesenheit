@@ -7,14 +7,14 @@ use picoserve::{AppRouter, AppWithStateBuilder};
 use static_cell::make_static;
 
 use crate::{
-    UsedStore,
+    TallyChannel, UsedStore,
     webserver::app::{AppProps, AppState},
 };
 
-mod assets;
-// mod sse;
 mod api;
 mod app;
+mod assets;
+mod sse;
 
 pub const WEB_TAKS_SIZE: usize = 3; // Up this number if request start fail with Timeouts.
 
@@ -22,10 +22,11 @@ pub fn start_webserver(
     spawner: &mut Spawner,
     stack: Stack<'static>,
     store: Rc<Mutex<CriticalSectionRawMutex, UsedStore>>,
+    chan: &'static TallyChannel,
 ) {
     let app = make_static!(AppProps.build_app());
 
-    let state = make_static!(AppState { store });
+    let state = make_static!(AppState { store, chan });
 
     let config = make_static!(picoserve::Config::new(picoserve::Timeouts {
         start_read_request: Some(Duration::from_secs(5)),
