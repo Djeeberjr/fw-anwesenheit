@@ -6,6 +6,7 @@ use embassy_time::{Duration, Timer};
 use esp_wifi::wifi::WifiDevice;
 use static_cell::make_static;
 
+pub const NETWORK_STACK_SIZE: usize = 5;
 
 pub fn setup_network<'a>(seed: u64, wifi: WifiDevice<'static>, spawner: &mut Spawner) -> Stack<'a> {
     let gw_ip_addr_str = "192.168.2.1";
@@ -16,8 +17,12 @@ pub fn setup_network<'a>(seed: u64, wifi: WifiDevice<'static>, spawner: &mut Spa
         dns_servers: Default::default(),
     });
 
-    let (stack, runner) =
-        embassy_net::new(wifi, config, make_static!(StackResources::<3>::new()), seed);
+    let (stack, runner) = embassy_net::new(
+        wifi,
+        config,
+        make_static!(StackResources::<NETWORK_STACK_SIZE>::new()),
+        seed,
+    );
 
     spawner.must_spawn(net_task(runner));
     spawner.must_spawn(run_dhcp(stack, gw_ip_addr_str));
@@ -69,4 +74,3 @@ async fn run_dhcp(stack: Stack<'static>, gw_ip_addr: &'static str) {
 async fn net_task(mut runner: Runner<'static, WifiDevice<'static>>) {
     runner.run().await;
 }
-
