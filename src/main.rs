@@ -10,7 +10,7 @@ use embassy_sync::{
     blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex},
     mutex::Mutex,
     pubsub::{
-        PubSubChannel, Publisher,
+        PubSubChannel, Publisher, Subscriber,
         WaitResult::{Lagged, Message},
     },
     signal::Signal,
@@ -39,6 +39,7 @@ static FEEDBACK_STATE: Signal<CriticalSectionRawMutex, feedback::FeedbackState> 
 
 type TallyChannel = PubSubChannel<NoopRawMutex, TallyID, 8, 2, 1>;
 type TallyPublisher = Publisher<'static, NoopRawMutex, TallyID, 8, 2, 1>;
+type TallySubscriber = Subscriber<'static, NoopRawMutex, TallyID, 8, 2, 1>;
 type UsedStore = IDStore<SDCardPersistence>;
 
 #[esp_hal_embassy::main]
@@ -54,8 +55,8 @@ async fn main(mut spawner: Spawner) {
     let shared_store = Rc::new(Mutex::new(store));
 
     let chan: &'static mut TallyChannel = make_static!(PubSubChannel::new());
-    let publisher = chan.publisher().unwrap();
-    let mut sub = chan.subscriber().unwrap();
+    let publisher: TallyPublisher = chan.publisher().unwrap();
+    let mut sub: TallySubscriber = chan.subscriber().unwrap();
 
     wait_for_stack_up(stack).await;
 
