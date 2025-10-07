@@ -1,8 +1,7 @@
-use embassy_time::{Delay, Duration, Timer};
-use esp_hal::{delay, gpio::Output, peripherals, rmt::ConstChannelAccess};
+use embassy_time::{Duration, Timer};
+use esp_hal::{peripherals, rmt::ConstChannelAccess};
 use esp_hal_smartled::SmartLedsAdapterAsync;
-use init::hardware;
-use log::{debug, error, info};
+use log::debug;
 use smart_leds::SmartLedsWriteAsync;
 use smart_leds::colors::{BLACK, GREEN, RED, YELLOW};
 use smart_leds::{brightness, colors::BLUE};

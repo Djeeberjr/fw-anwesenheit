@@ -4,6 +4,7 @@ use picoserve::{
     response::{self, IntoResponse},
 };
 use serde::Deserialize;
+
 use crate::{
     store::{Name, hex_string_to_tally_id},
     webserver::{app::AppState, sse::IDEvents},
@@ -40,6 +41,6 @@ pub async fn add_mapping(
     store.mapping.add_mapping(tally_id, data.name);
 }
 
-pub async fn get_idevent(State(state): State<AppState>) -> impl IntoResponse{
+pub async fn get_idevent(State(state): State<AppState>) -> impl IntoResponse {
     response::EventStream(IDEvents(state.chan.subscriber().unwrap()))
 }

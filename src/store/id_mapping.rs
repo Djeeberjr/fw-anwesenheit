@@ -1,7 +1,8 @@
-use super::TallyID;
 use alloc::collections::BTreeMap;
 use alloc::string::String;
 use serde::{Deserialize, Serialize};
+
+use super::TallyID;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Name {

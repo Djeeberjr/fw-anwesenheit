@@ -21,13 +21,13 @@ use esp_hal::{gpio::InputConfig, peripherals};
 use log::{debug, info};
 use static_cell::make_static;
 
+extern crate alloc;
+
 use crate::{
     init::sd_card::SDCardPersistence,
     store::{Date, IDStore, TallyID},
     webserver::start_webserver,
 };
-
-extern crate alloc;
 
 mod drivers;
 mod feedback;

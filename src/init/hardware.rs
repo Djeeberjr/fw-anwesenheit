@@ -1,13 +1,10 @@
 use core::cell::RefCell;
-
-use bleps::att::Att;
 use critical_section::Mutex;
-use ds3231::InterruptControl;
 use embassy_executor::Spawner;
 use embassy_net::Stack;
-
 use embassy_time::{Duration, Timer};
-use esp_hal::gpio::{Input, InputConfig};
+use esp_hal::Blocking;
+use esp_hal::gpio::Input;
 use esp_hal::i2c::master::Config;
 use esp_hal::peripherals::{
     GPIO0, GPIO1, GPIO16, GPIO17, GPIO18, GPIO19, GPIO20, GPIO21, GPIO22, GPIO23, I2C0, RMT, SPI2,
@@ -15,8 +12,6 @@ use esp_hal::peripherals::{
 };
 use esp_hal::rmt::{ConstChannelAccess, Rmt};
 use esp_hal::spi::master::{Config as Spi_config, Spi};
-
-use esp_hal::Blocking;
 use esp_hal::time::Rate;
 use esp_hal::timer::timg::TimerGroup;
 use esp_hal::{
@@ -28,16 +23,12 @@ use esp_hal::{
     uart::Uart,
 };
 use esp_hal_smartled::{SmartLedsAdapterAsync, buffer_size_async};
-use esp_println::dbg;
 use esp_println::logger::init_logger;
-use log::{debug, error, info};
+use log::{debug, error};
 
-use crate::FEEDBACK_STATE;
 use crate::init::network;
-use crate::init::sd_card::{setup_sdcard, SDCardPersistence};
+use crate::init::sd_card::{SDCardPersistence, setup_sdcard};
 use crate::init::wifi;
-use crate::store::AttendanceDay;
-use crate::store::persistence::Persistence;
 
 /*************************************************
  * GPIO Pinout Xiao Esp32c6

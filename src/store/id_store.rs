@@ -1,13 +1,11 @@
-use crate::drivers::rtc;
-use crate::drivers::rtc::RTCClock;
-use crate::store::persistence::Persistence;
+use alloc::vec::Vec;
+use serde::Deserialize;
+use serde::Serialize;
 
 use super::Date;
 use super::IDMapping;
 use super::TallyID;
-use alloc::vec::Vec;
-use serde::Deserialize;
-use serde::Serialize;
+use crate::store::persistence::Persistence;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct AttendanceDay {
@@ -16,7 +14,7 @@ pub struct AttendanceDay {
 }
 
 impl AttendanceDay {
-   pub fn new(date: Date) -> Self {
+    pub fn new(date: Date) -> Self {
         Self {
             date,
             ids: Vec::new(),
@@ -47,7 +45,7 @@ impl<T: Persistence> IDStore<T> {
         //     Some(map) => map,
         //     None => IDMapping::new(),
         // };
- 
+
         let current_date: Date = [0; 10];
 
         let day = persistence_layer
@@ -75,7 +73,6 @@ impl<T: Persistence> IDStore<T> {
     /// Add a new id for the current day
     /// Returns false if ID is already present at the current day.
     pub async fn add_id(&mut self, id: TallyID, current_date: Date) -> bool {
-
         if self.current_day.date == current_date {
             let changed = self.current_day.add_id(id);
             if changed {

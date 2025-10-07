@@ -1,5 +1,4 @@
 use core::{net::Ipv4Addr, str::FromStr};
-
 use embassy_executor::Spawner;
 use embassy_net::{Ipv4Cidr, Runner, Stack, StackResources, StaticConfigV4};
 use embassy_time::{Duration, Timer};
