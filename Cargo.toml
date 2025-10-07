@@ -58,7 +58,7 @@ log = { version = "0.4" }
 edge-dhcp = { version = "0.6.0", features = ["log"] }
 edge-nal = "0.5.0"
 edge-nal-embassy = { version = "0.6.0", features = ["log"] }
-picoserve = { version = "0.16.0", features = ["embassy", "log"] }
+picoserve = { git = "https://github.com/sammhicks/picoserve.git", rev = "400df53f61137e1bb2883ec610fc191bfe551a3a", features = ["embassy", "log", "json"] }
 embassy-sync = { version = "0.7.0", features = ["log"] }
 ds3231 = { version = "0.3.0", features = ["async", "temperature_f32"] }
 chrono = { version = "0.4.41", default-features = false } 
@@ -69,6 +69,7 @@ serde = { version = "1.0.219", default-features = false, features = ["derive", "
 embedded-sdmmc = "0.8.0"
 embedded-hal-bus = "0.3.0"
 serde_json = { version = "1.0.143", default-features = false, features = ["alloc"]}
+embassy-futures = { version = "0.1.2", features = ["log"] }
 
 [profile.dev]
 # Rust debug is too slow.
