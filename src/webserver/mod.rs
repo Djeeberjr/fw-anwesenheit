@@ -1,54 +1,57 @@
+use alloc::rc::Rc;
 use embassy_executor::Spawner;
 use embassy_net::Stack;
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use embassy_time::Duration;
-use picoserve::{AppBuilder, AppRouter, routing::get};
+use picoserve::{AppRouter, AppWithStateBuilder};
 use static_cell::make_static;
 
-mod assets;
+use crate::{
+    UsedStore,
+    init::network::NETWORK_STACK_SIZE,
+    webserver::app::{AppProps, AppState},
+};
 
-pub fn start_webserver(spawner: &mut Spawner, stack: Stack<'static>) {
+mod assets;
+// mod sse;
+mod api;
+mod app;
+
+pub fn start_webserver(
+    spawner: &mut Spawner,
+    stack: Stack<'static>,
+    store: Rc<Mutex<CriticalSectionRawMutex, UsedStore>>,
+) {
     let app = make_static!(AppProps.build_app());
+
+    let state = make_static!(AppState { store });
 
     let config = make_static!(picoserve::Config::new(picoserve::Timeouts {
         start_read_request: Some(Duration::from_secs(5)),
-        persistent_start_read_request: Some(Duration::from_secs(1)),
-        read_request: Some(Duration::from_secs(1)),
-        write: Some(Duration::from_secs(1)),
+        persistent_start_read_request: Some(Duration::from_secs(5)),
+        read_request: Some(Duration::from_secs(5)),
+        write: Some(Duration::from_secs(5)),
     }));
 
-    let _ = spawner.spawn(webserver_task(0, stack, app, config));
-}
-
-struct AppProps;
-
-impl AppBuilder for AppProps {
-    type PathRouter = impl picoserve::routing::PathRouter;
-
-    fn build_app(self) -> picoserve::Router<Self::PathRouter> {
-        picoserve::Router::from_service(assets::Assets).route("/api/a", get(async move || "Hello"))
+    for task_id in 0..NETWORK_STACK_SIZE {
+        spawner.must_spawn(webserver_task(task_id, stack, app, config, state));
     }
 }
 
-#[embassy_executor::task]
+#[embassy_executor::task(pool_size = NETWORK_STACK_SIZE)]
 async fn webserver_task(
-    id: usize,
+    task_id: usize,
     stack: embassy_net::Stack<'static>,
     app: &'static AppRouter<AppProps>,
     config: &'static picoserve::Config<Duration>,
+    state: &'static AppState,
 ) -> ! {
     let mut tcp_rx_buffer = [0u8; 1024];
     let mut tcp_tx_buffer = [0u8; 1024];
     let mut http_buffer = [0u8; 2048];
 
-    picoserve::listen_and_serve(
-        id,
-        app,
-        config,
-        stack,
-        80,
-        &mut tcp_rx_buffer,
-        &mut tcp_tx_buffer,
-        &mut http_buffer,
-    )
-    .await
+    picoserve::Server::new(&app.shared().with_state(state), config, &mut http_buffer)
+        .listen_and_serve(task_id, stack, 80, &mut tcp_rx_buffer, &mut tcp_tx_buffer)
+        .await
+        .into_never()
 }

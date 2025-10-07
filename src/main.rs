@@ -3,11 +3,12 @@
 #![feature(type_alias_impl_trait)]
 #![feature(impl_trait_in_assoc_type)]
 
+use alloc::rc::Rc;
 use embassy_executor::Spawner;
 use embassy_net::Stack;
 use embassy_sync::{
     blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex},
-    channel::Channel,
+    mutex::Mutex,
     pubsub::{
         PubSubChannel, Publisher,
         WaitResult::{Lagged, Message},
@@ -20,7 +21,11 @@ use esp_hal::{gpio::InputConfig, peripherals};
 use log::{debug, info};
 use static_cell::make_static;
 
-use crate::store::{Date, IDStore, TallyID};
+use crate::{
+    init::sd_card::SDCardPersistence,
+    store::{Date, IDStore, TallyID},
+    webserver::start_webserver,
+};
 
 extern crate alloc;
 
@@ -28,29 +33,33 @@ mod drivers;
 mod feedback;
 mod init;
 mod store;
-//mod webserver;
+mod webserver;
 
 static FEEDBACK_STATE: Signal<CriticalSectionRawMutex, feedback::FeedbackState> = Signal::new();
 
 type TallyChannel = PubSubChannel<NoopRawMutex, TallyID, 8, 2, 1>;
 type TallyPublisher = Publisher<'static, NoopRawMutex, TallyID, 8, 2, 1>;
+type UsedStore = IDStore<SDCardPersistence>;
 
 #[esp_hal_embassy::main]
 async fn main(mut spawner: Spawner) {
     let (uart_device, stack, _i2c, _led, buzzer_gpio, sd_det_gpio, persistence_layer) =
         init::hardware::hardware_init(&mut spawner).await;
 
-    wait_for_stack_up(stack).await;
-
     info!("Starting up...");
 
-    let chan: &'static mut TallyChannel = make_static!(PubSubChannel::new());
-
-    //start_webserver(&mut spawner, stack);
-
-    let publisher = chan.publisher().unwrap();
-
     let mut rtc = drivers::rtc::RTCClock::new(_i2c).await;
+
+    let store: UsedStore = IDStore::new_from_storage(persistence_layer).await;
+    let shared_store = Rc::new(Mutex::new(store));
+
+    let chan: &'static mut TallyChannel = make_static!(PubSubChannel::new());
+    let publisher = chan.publisher().unwrap();
+    let mut sub = chan.subscriber().unwrap();
+
+    wait_for_stack_up(stack).await;
+
+    start_webserver(&mut spawner, stack, shared_store.clone());
 
     /****************************** Spawning tasks ***********************************/
     debug!("spawing NFC reader task...");
@@ -66,12 +75,8 @@ async fn main(mut spawner: Spawner) {
     spawner.must_spawn(sd_detect_task(sd_det_gpio));
     /******************************************************************************/
 
-    let mut sub = chan.subscriber().unwrap();
-
     debug!("everything spawned");
     FEEDBACK_STATE.signal(feedback::FeedbackState::Startup);
-
-    let mut store = IDStore::new_from_storage(persistence_layer).await;
 
     loop {
         let wait_result = sub.next_message().await;
@@ -81,7 +86,7 @@ async fn main(mut spawner: Spawner) {
                 debug!("Got message: {msg:?}");
 
                 let day: Date = rtc.get_date().await;
-                let added = store.add_id(msg, day).await;
+                let added = shared_store.lock().await.add_id(msg, day).await;
 
                 if added {
                     FEEDBACK_STATE.signal(feedback::FeedbackState::Ack);
