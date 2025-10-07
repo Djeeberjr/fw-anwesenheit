@@ -6,7 +6,10 @@ use embassy_time::{Duration, Timer};
 use esp_wifi::wifi::WifiDevice;
 use static_cell::make_static;
 
-pub const NETWORK_STACK_SIZE: usize = 5;
+use crate::webserver::WEB_TAKS_SIZE;
+
+pub const NETWORK_STACK_SIZE: usize = WEB_TAKS_SIZE + 2; // + 2 for other network taks. Breaks
+                                                         // without
 
 pub fn setup_network<'a>(seed: u64, wifi: WifiDevice<'static>, spawner: &mut Spawner) -> Stack<'a> {
     let gw_ip_addr_str = "192.168.2.1";

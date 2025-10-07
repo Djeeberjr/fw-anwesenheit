@@ -8,7 +8,6 @@ use static_cell::make_static;
 
 use crate::{
     UsedStore,
-    init::network::NETWORK_STACK_SIZE,
     webserver::app::{AppProps, AppState},
 };
 
@@ -16,6 +15,8 @@ mod assets;
 // mod sse;
 mod api;
 mod app;
+
+pub const WEB_TAKS_SIZE: usize = 3; // Up this number if request start fail with Timeouts.
 
 pub fn start_webserver(
     spawner: &mut Spawner,
@@ -33,12 +34,12 @@ pub fn start_webserver(
         write: Some(Duration::from_secs(5)),
     }));
 
-    for task_id in 0..NETWORK_STACK_SIZE {
+    for task_id in 0..WEB_TAKS_SIZE {
         spawner.must_spawn(webserver_task(task_id, stack, app, config, state));
     }
 }
 
-#[embassy_executor::task(pool_size = NETWORK_STACK_SIZE)]
+#[embassy_executor::task(pool_size = WEB_TAKS_SIZE)]
 async fn webserver_task(
     task_id: usize,
     stack: embassy_net::Stack<'static>,
