@@ -17,7 +17,11 @@ pub async fn rfid_reader_task(mut uart_device: Uart<'static, Async>, chan: Tally
                     core::fmt::Write::write_fmt(&mut hex_str, format_args!("{:02X} ", byte)).ok();
                 }
                 info!("Read {n} bytes from UART: {hex_str}");
-                chan.publish(uart_buffer[..8].try_into().unwrap()).await;
+
+                // The first byte is always 0x02 (Start of text) 
+                // Followed by 12 Bytes of chars
+                // Ended by 0x03 (End of text)
+                chan.publish(uart_buffer[1..13].try_into().unwrap()).await;
             }
             Err(e) => {
                 log::error!("Error reading from UART: {e}");
