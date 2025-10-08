@@ -2,7 +2,7 @@ use alloc::collections::BTreeMap;
 use alloc::string::String;
 use serde::{Deserialize, Serialize};
 
-use super::TallyID;
+use crate::store::tally_id::TallyID;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Name {

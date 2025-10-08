@@ -4,8 +4,8 @@ use serde::Serialize;
 
 use super::Date;
 use super::IDMapping;
-use super::TallyID;
 use crate::store::persistence::Persistence;
+use crate::store::tally_id::TallyID;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct AttendanceDay {

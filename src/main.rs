@@ -25,7 +25,7 @@ extern crate alloc;
 
 use crate::{
     init::sd_card::SDCardPersistence,
-    store::{Date, IDStore, TallyID},
+    store::{Date, IDStore, tally_id::TallyID},
     webserver::start_webserver,
 };
 

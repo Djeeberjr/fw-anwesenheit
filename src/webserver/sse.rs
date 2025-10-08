@@ -2,7 +2,7 @@ use embassy_time::{Duration, Timer};
 use log::warn;
 use picoserve::response;
 
-use crate::{TallySubscriber, store::tally_id_to_hex_string};
+use crate::TallySubscriber;
 
 pub struct IDEvents(pub TallySubscriber);
 
@@ -18,9 +18,8 @@ impl response::sse::EventSource for IDEvents {
             match sel.await {
                 embassy_futures::select::Either::First(msg) => match msg {
                     embassy_sync::pubsub::WaitResult::Message(id) => {
-                        writer
-                            .write_event("msg", tally_id_to_hex_string(id).unwrap().as_str())
-                            .await?
+                        let id_str: heapless::String<12> = id.into();
+                        writer.write_event("msg", id_str.as_str()).await?
                     }
                     embassy_sync::pubsub::WaitResult::Lagged(_) => {
                         warn!("SSE subscriber got lagged");
