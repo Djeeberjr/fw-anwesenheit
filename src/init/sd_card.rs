@@ -1,12 +1,10 @@
-use alloc::{format, vec::Vec};
+use alloc::vec::Vec;
 use embassy_time::Delay;
 use embedded_hal_bus::spi::ExclusiveDevice;
-use embedded_sdmmc::{
-    Directory, SdCard, ShortFileName, TimeSource, Timestamp, VolumeIdx, VolumeManager,
-};
+use embedded_sdmmc::{SdCard, ShortFileName, TimeSource, Timestamp, VolumeIdx, VolumeManager};
 use esp_hal::{Blocking, gpio::Output, spi::master::Spi};
 
-use crate::store::{AttendanceDay, day::Day, persistence::Persistence};
+use crate::store::{AttendanceDay, IDMapping, day::Day, persistence::Persistence};
 
 pub struct DummyTimesource;
 
@@ -41,6 +39,8 @@ pub struct SDCardPersistence {
 }
 
 impl SDCardPersistence {
+    const MAPPING_FILENAME: &'static str = "MAPPING.JS";
+
     fn generate_filename(day: Day) -> ShortFileName {
         let basename = day.to_string();
         let mut filename: heapless::String<11> = heapless::String::new();
@@ -83,6 +83,7 @@ impl Persistence for SDCardPersistence {
         let mut file = root_dir
             .open_file_in_dir(filename, embedded_sdmmc::Mode::ReadWriteCreateOrTruncate)
             .unwrap();
+
         file.write(&serde_json::to_vec(data).unwrap()).unwrap();
 
         file.flush().unwrap();
@@ -90,11 +91,42 @@ impl Persistence for SDCardPersistence {
     }
 
     async fn load_mapping(&mut self) -> Option<crate::store::IDMapping> {
-        todo!()
+        let mut vol_0 = self.vol_mgr.open_volume(VolumeIdx(0)).unwrap();
+        let mut root_dir = vol_0.open_root_dir().unwrap();
+
+        let file =
+            root_dir.open_file_in_dir(Self::MAPPING_FILENAME, embedded_sdmmc::Mode::ReadOnly);
+
+        if file.is_err() {
+            return None;
+        }
+
+        let mut open_file = file.unwrap();
+
+        let mut read_buffer: [u8; 1024] = [0; 1024];
+        let read = open_file.read(&mut read_buffer).unwrap();
+        open_file.close().unwrap();
+
+        let mapping: IDMapping = serde_json::from_slice(&read_buffer[..read]).unwrap();
+
+        Some(mapping)
     }
 
     async fn save_mapping(&mut self, data: &crate::store::IDMapping) {
-        todo!()
+        let mut vol_0 = self.vol_mgr.open_volume(VolumeIdx(0)).unwrap();
+        let mut root_dir = vol_0.open_root_dir().unwrap();
+
+        let mut file = root_dir
+            .open_file_in_dir(
+                Self::MAPPING_FILENAME,
+                embedded_sdmmc::Mode::ReadWriteCreateOrTruncate,
+            )
+            .unwrap();
+
+        file.write(&serde_json::to_vec(data).unwrap()).unwrap();
+
+        file.flush().unwrap();
+        file.close().unwrap();
     }
 
     async fn list_days(&mut self) -> Vec<Day> {
