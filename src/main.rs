@@ -25,7 +25,7 @@ extern crate alloc;
 
 use crate::{
     init::sd_card::SDCardPersistence,
-    store::{Date, IDStore, tally_id::TallyID},
+    store::{IDStore, day::Day, tally_id::TallyID},
     webserver::start_webserver,
 };
 
@@ -86,7 +86,7 @@ async fn main(mut spawner: Spawner) {
             Message(msg) => {
                 debug!("Got message: {msg:?}");
 
-                let day: Date = rtc.get_date().await;
+                let day: Day = rtc.get_time().await.into();
                 let added = shared_store.lock().await.add_id(msg, day).await;
 
                 if added {

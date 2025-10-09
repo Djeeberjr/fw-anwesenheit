@@ -9,7 +9,7 @@ use esp_hal::{
 };
 use log::{debug, error, info};
 
-use crate::{FEEDBACK_STATE, drivers, feedback, store::Date};
+use crate::{FEEDBACK_STATE, drivers, feedback};
 
 include!(concat!(env!("OUT_DIR"), "/build_time.rs"));
 
@@ -44,31 +44,6 @@ impl RTCClock {
                 0
             }
         }
-    }
-
-    pub async fn get_date(&mut self) -> Date {
-        let (year, month, day) = unix_to_ymd_string(self.get_time().await);
-
-        let mut buffer: Date = [0; 10];
-
-        // Write YYYY
-        buffer[0] = b'0' + ((year / 1000) % 10) as u8;
-        buffer[1] = b'0' + ((year / 100) % 10) as u8;
-        buffer[2] = b'0' + ((year / 10) % 10) as u8;
-        buffer[3] = b'0' + (year % 10) as u8;
-        buffer[4] = b'.';
-
-        // Write MM
-        buffer[5] = b'0' + (month / 10) as u8;
-        buffer[6] = b'0' + (month % 10) as u8;
-
-        buffer[7] = b'.';
-
-        // Write DD
-        buffer[8] = b'0' + (day / 10) as u8;
-        buffer[9] = b'0' + (day % 10) as u8;
-
-        buffer
     }
 }
 

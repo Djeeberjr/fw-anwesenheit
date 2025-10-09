@@ -2,19 +2,19 @@ use alloc::vec::Vec;
 use serde::Deserialize;
 use serde::Serialize;
 
-use super::Date;
 use super::IDMapping;
+use crate::store::day::Day;
 use crate::store::persistence::Persistence;
 use crate::store::tally_id::TallyID;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct AttendanceDay {
-    date: Date,
+    date: Day,
     ids: Vec<TallyID>,
 }
 
 impl AttendanceDay {
-    pub fn new(date: Date) -> Self {
+    pub fn new(date: Day) -> Self {
         Self {
             date,
             ids: Vec::new(),
@@ -46,7 +46,7 @@ impl<T: Persistence> IDStore<T> {
         //     None => IDMapping::new(),
         // };
 
-        let current_date: Date = [0; 10];
+        let current_date: Day = Day::new(0);
 
         let day = persistence_layer
             .load_day(current_date)
@@ -72,7 +72,7 @@ impl<T: Persistence> IDStore<T> {
 
     /// Add a new id for the current day
     /// Returns false if ID is already present at the current day.
-    pub async fn add_id(&mut self, id: TallyID, current_date: Date) -> bool {
+    pub async fn add_id(&mut self, id: TallyID, current_date: Day) -> bool {
         if self.current_day.date == current_date {
             let changed = self.current_day.add_id(id);
             if changed {

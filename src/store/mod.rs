@@ -5,6 +5,5 @@ mod id_mapping;
 pub mod persistence;
 mod id_store;
 pub mod tally_id;
-
-pub type Date = [u8; 10];
+pub mod day;
 

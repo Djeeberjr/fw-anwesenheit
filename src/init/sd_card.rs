@@ -4,7 +4,7 @@ use embedded_hal_bus::spi::ExclusiveDevice;
 use embedded_sdmmc::{SdCard, TimeSource, Timestamp, VolumeIdx, VolumeManager};
 use esp_hal::{Blocking, gpio::Output, spi::master::Spi};
 
-use crate::store::{AttendanceDay, Date, persistence::Persistence};
+use crate::store::{AttendanceDay, day::Day, persistence::Persistence};
 
 pub struct DummyTimesource;
 
@@ -39,7 +39,7 @@ pub struct SDCardPersistence {
 }
 
 impl Persistence for SDCardPersistence {
-    async fn load_day(&mut self, day: crate::store::Date) -> Option<AttendanceDay> {
+    async fn load_day(&mut self, day: Day) -> Option<AttendanceDay> {
         let mut vol_0 = self.vol_mgr.open_volume(VolumeIdx(0)).unwrap();
         let mut root_dir = vol_0.open_root_dir().unwrap();
         let mut file = root_dir.open_file_in_dir("day.jsn", embedded_sdmmc::Mode::ReadOnly);
@@ -53,12 +53,13 @@ impl Persistence for SDCardPersistence {
         let read = open_file.read(&mut read_buffer).unwrap();
         open_file.close().unwrap();
 
-        let day: AttendanceDay = serde_json::from_slice(&read_buffer[..read]).unwrap();
+        // let day: AttendanceDay = serde_json::from_slice(&read_buffer[..read]).unwrap();
 
-        Some(day)
+        // Some(day)
+        None
     }
 
-    async fn save_day(&mut self, day: Date, data: &AttendanceDay) {
+    async fn save_day(&mut self, day: Day, data: &AttendanceDay) {
         let mut vol_0 = self.vol_mgr.open_volume(VolumeIdx(0)).unwrap();
         let mut root_dir = vol_0.open_root_dir().unwrap();
 
@@ -78,15 +79,15 @@ impl Persistence for SDCardPersistence {
         todo!()
     }
 
-    async fn list_days(&mut self) -> Vec<Date> {
+    async fn list_days(&mut self) -> Vec<Day> {
         let mut vol_0 = self.vol_mgr.open_volume(VolumeIdx(0)).unwrap();
         let mut root_dir = vol_0.open_root_dir().unwrap();
         let mut days_dir = root_dir.open_dir("days").unwrap();
 
-        let mut days: Vec<[u8; 10]> = Vec::new();
+        let mut days: Vec<Day> = Vec::new();
         days_dir
             .iterate_dir(|e| {
-                days.push([0; 10]);
+                days.push(Day::new(0));
             })
             .unwrap();
 
