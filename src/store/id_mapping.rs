@@ -10,7 +10,7 @@ pub struct Name {
     pub last: String,
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct IDMapping {
     #[serde(flatten)]
     id_map: BTreeMap<TallyID, Name>,
