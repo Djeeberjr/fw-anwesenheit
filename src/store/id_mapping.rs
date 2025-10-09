@@ -12,6 +12,7 @@ pub struct Name {
 
 #[derive(Clone, Serialize)]
 pub struct IDMapping {
+    #[serde(flatten)]
     id_map: BTreeMap<TallyID, Name>,
 }
 
