@@ -1,7 +1,9 @@
-use alloc::vec::Vec;
+use alloc::{format, vec::Vec};
 use embassy_time::Delay;
 use embedded_hal_bus::spi::ExclusiveDevice;
-use embedded_sdmmc::{SdCard, TimeSource, Timestamp, VolumeIdx, VolumeManager};
+use embedded_sdmmc::{
+    Directory, SdCard, ShortFileName, TimeSource, Timestamp, VolumeIdx, VolumeManager,
+};
 use esp_hal::{Blocking, gpio::Output, spi::master::Spi};
 
 use crate::store::{AttendanceDay, day::Day, persistence::Persistence};
@@ -38,37 +40,53 @@ pub struct SDCardPersistence {
     vol_mgr: VolMgr,
 }
 
+impl SDCardPersistence {
+    fn generate_filename(day: Day) -> ShortFileName {
+        let basename = day.to_string();
+        let mut filename: heapless::String<11> = heapless::String::new();
+        filename.push_str(&basename).unwrap();
+        filename.push_str(".js").unwrap();
+
+        ShortFileName::create_from_str(&filename).unwrap()
+    }
+}
+
 impl Persistence for SDCardPersistence {
     async fn load_day(&mut self, day: Day) -> Option<AttendanceDay> {
         let mut vol_0 = self.vol_mgr.open_volume(VolumeIdx(0)).unwrap();
         let mut root_dir = vol_0.open_root_dir().unwrap();
-        let mut file = root_dir.open_file_in_dir("day.jsn", embedded_sdmmc::Mode::ReadOnly);
 
-        if let Err(e) = file {
+        let filename = Self::generate_filename(day);
+        let file = root_dir.open_file_in_dir(filename, embedded_sdmmc::Mode::ReadOnly);
+
+        if file.is_err() {
             return None;
         }
+
         let mut open_file = file.unwrap();
 
         let mut read_buffer: [u8; 1024] = [0; 1024];
         let read = open_file.read(&mut read_buffer).unwrap();
         open_file.close().unwrap();
 
-        // let day: AttendanceDay = serde_json::from_slice(&read_buffer[..read]).unwrap();
+        let day: AttendanceDay = serde_json::from_slice(&read_buffer[..read]).unwrap();
 
-        // Some(day)
-        None
+        Some(day)
     }
 
     async fn save_day(&mut self, day: Day, data: &AttendanceDay) {
         let mut vol_0 = self.vol_mgr.open_volume(VolumeIdx(0)).unwrap();
         let mut root_dir = vol_0.open_root_dir().unwrap();
 
+        let filename = Self::generate_filename(day);
+
         let mut file = root_dir
-            .open_file_in_dir("day.jsn", embedded_sdmmc::Mode::ReadWriteCreateOrTruncate)
+            .open_file_in_dir(filename, embedded_sdmmc::Mode::ReadWriteCreateOrTruncate)
             .unwrap();
         file.write(&serde_json::to_vec(data).unwrap()).unwrap();
-        file.flush();
-        file.close();
+
+        file.flush().unwrap();
+        file.close().unwrap();
     }
 
     async fn load_mapping(&mut self) -> Option<crate::store::IDMapping> {
@@ -87,7 +105,9 @@ impl Persistence for SDCardPersistence {
         let mut days: Vec<Day> = Vec::new();
         days_dir
             .iterate_dir(|e| {
-                days.push(Day::new(0));
+                let filename = e.name.clone();
+                let day: Day = filename.try_into().unwrap();
+                days.push(day);
             })
             .unwrap();
 
