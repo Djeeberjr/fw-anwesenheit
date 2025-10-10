@@ -15,7 +15,9 @@
     "svelte": "^5.28.1",
     "svelte-check": "^4.1.6",
     "typescript": "~5.8.3",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "body-parser": "^2.2.0",
+    "express": "^5.1.0"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.7",
