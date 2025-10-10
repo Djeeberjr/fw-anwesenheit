@@ -1,7 +1,3 @@
-export interface IDMapping {
-  id_map: IDMap
-}
-
 export interface IDMap {
   [name: string]: Name
 }
@@ -9,6 +5,23 @@ export interface IDMap {
 export interface Name {
   first: string,
   last: string,
+}
+
+function stupidSerdeFix(pairs: [string, Name][]): IDMap {
+  const map: IDMap = {};
+  for (const [key, value] of pairs) {
+    map[key] = value;
+  }
+
+  return map;
+}
+
+export async function fetchMapping(): Promise<IDMap> {
+  let res = await fetch("/api/mapping");
+
+  let data = await res.json();
+
+  return stupidSerdeFix(data);
 }
 
 export async function addMapping(id: string, firstName: string, lastName: string) {

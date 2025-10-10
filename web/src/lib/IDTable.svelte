@@ -1,19 +1,20 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import type { IDMapping } from "./IDMapping";
-  let data: IDMapping | undefined = $state();
+  import { fetchMapping, type IDMap } from "./IDMapping";
+  let data: IDMap | undefined = $state();
 
-  let { onEdit }: { onEdit?: (string,string,string) => void } = $props();
+  let {
+    onEdit,
+  }: { onEdit?: (id: string, firstName: string, lastName: string) => void } =
+    $props();
 
   export async function reloadData() {
-    let res = await fetch("/api/mapping");
-
-    data = await res.json();
+    data = await fetchMapping();
   }
 
   let rows = $derived(
     data
-      ? Object.entries(data.id_map).map(([id, value]) => ({
+      ? Object.entries(data).map(([id, value]) => ({
           id,
           ...value,
         }))
@@ -47,7 +48,6 @@
   onMount(async () => {
     await reloadData();
   });
-
 </script>
 
 {#if data == null}
@@ -84,8 +84,7 @@
 
             <span class="indicator">{indicator("first")}</span>
           </th>
-          <th>
-          </th>
+          <th> </th>
         </tr>
       </thead>
       <tbody>
@@ -94,9 +93,14 @@
             <td class="whitespace-nowrap pr-5 pl-2 py-1">{row.id}</td>
             <td class="whitespace-nowrap pr-5">{row.last}</td>
             <td class="whitespace-nowrap pr-5">{row.first}</td>
-            <td class="pr-5" ><button onclick={()=>{
-              onEdit && onEdit(row.id,row.first,row.last);
-            }} class="cursor-pointer">🔧</button></td>
+            <td class="pr-5"
+              ><button
+                onclick={() => {
+                  onEdit && onEdit(row.id, row.first, row.last);
+                }}
+                class="cursor-pointer">🔧</button
+              ></td
+            >
           </tr>
         {/each}
       </tbody>
@@ -106,7 +110,6 @@
 
 <style lang="css" scoped>
   @reference "../app.css";
-
   .indicator {
     @apply ml-1 w-4 inline-block;
   }
