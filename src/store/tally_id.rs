@@ -1,4 +1,4 @@
-use core::str::FromStr;
+use core::{fmt::Display, str::FromStr};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -69,6 +69,13 @@ impl TryFrom<&[u8]> for TallyID {
         }
 
         Ok(TallyID(out))
+    }
+}
+
+impl Display for TallyID {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let s: heapless::String<12> = (*self).into();
+        write!(f, "{}", s)
     }
 }
 
