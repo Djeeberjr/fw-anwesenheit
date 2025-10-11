@@ -132,14 +132,17 @@ impl Persistence for SDCardPersistence {
     async fn list_days(&mut self) -> Vec<Day> {
         let mut vol_0 = self.vol_mgr.open_volume(VolumeIdx(0)).unwrap();
         let mut root_dir = vol_0.open_root_dir().unwrap();
-        let mut days_dir = root_dir.open_dir("days").unwrap();
+
+        let mut days_dir = root_dir.open_dir(".").unwrap();
 
         let mut days: Vec<Day> = Vec::new();
         days_dir
             .iterate_dir(|e| {
                 let filename = e.name.clone();
-                let day: Day = filename.try_into().unwrap();
-                days.push(day);
+
+                if let Ok(day) = filename.try_into() {
+                    days.push(day);
+                }
             })
             .unwrap();
 
