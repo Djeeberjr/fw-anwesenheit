@@ -72,6 +72,14 @@ impl TryFrom<&[u8]> for TallyID {
     }
 }
 
+impl TryFrom<[u8; 12]> for TallyID {
+    type Error = ();
+
+    fn try_from(value: [u8; 12]) -> Result<Self, Self::Error> {
+        Self::try_from(&value as &[u8])
+    }
+}
+
 impl Display for TallyID {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let s: heapless::String<12> = (*self).into();
