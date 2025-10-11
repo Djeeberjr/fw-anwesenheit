@@ -3,7 +3,7 @@ use core::fmt::Write;
 use embedded_sdmmc::ShortFileName;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Day(u32);
 
 impl Day {
