@@ -1,6 +1,6 @@
 use embassy_time::{Duration, Timer};
 use esp_hal::{Async, uart::Uart};
-use log::{debug, info};
+use log::{debug, info, warn};
 
 use crate::TallyPublisher;
 
@@ -18,10 +18,14 @@ pub async fn rfid_reader_task(mut uart_device: Uart<'static, Async>, chan: Tally
                 }
                 info!("Read {n} bytes from UART: {hex_str}");
 
-                // The first byte is always 0x02 (Start of text) 
-                // Followed by 12 Bytes of chars
-                // Ended by 0x03 (End of text)
-                chan.publish(uart_buffer[1..13].try_into().unwrap()).await;
+                match extract_id(&uart_buffer) {
+                    Some(read) => {
+                        chan.publish(read.try_into().unwrap()).await;
+                    }
+                    None => {
+                        warn!("Invalid read from the RFID reader");
+                    }
+                };
             }
             Err(e) => {
                 log::error!("Error reading from UART: {e}");
@@ -29,4 +33,36 @@ pub async fn rfid_reader_task(mut uart_device: Uart<'static, Async>, chan: Tally
         }
         Timer::after(Duration::from_millis(200)).await;
     }
+}
+
+/// Scans the UART output and retuns the first propper read ID
+/// This ensures that only valid ID are parsed
+///
+/// A valid read looks like this:
+/// The first byte is always 0x02 (Start of text)
+/// Followed by 12 Bytes of chars
+/// Ended by 0x03 (End of text)
+pub fn extract_id(buffer: &[u8]) -> Option<[u8; 12]> {
+    const STX: u8 = 0x02; // Start of Text ASCII char
+    const ETX: u8 = 0x03; // End of Text ASCII char
+    const ID_LENGTH: usize = 12;
+    const MINIMUM_SEQUENCE: usize = ID_LENGTH + 2; // STX + 12 bytes + ETX
+
+    if buffer.len() < MINIMUM_SEQUENCE {
+        return None;
+    }
+
+    for window_start in 0..=buffer.len() - MINIMUM_SEQUENCE {
+        if buffer[window_start] == STX {
+            let id_end = window_start + ID_LENGTH + 1;
+
+            if buffer[id_end] == ETX {
+                let mut id = [0u8; ID_LENGTH];
+                id.copy_from_slice(&buffer[window_start + 1..id_end]);
+                return Some(id);
+            }
+        }
+    }
+
+    None
 }
