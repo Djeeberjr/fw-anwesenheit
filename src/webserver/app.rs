@@ -5,7 +5,7 @@ use picoserve::{AppWithStateBuilder, routing::get};
 use crate::{
     TallyChannel, UsedStore,
     webserver::{
-        api::{add_mapping, get_idevent, get_mapping},
+        api::{add_mapping, get_day, get_days, get_idevent, get_mapping},
         assets::Assets,
     },
 };
@@ -26,5 +26,7 @@ impl AppWithStateBuilder for AppProps {
         picoserve::Router::from_service(Assets)
             .route("/api/mapping", get(get_mapping).post(add_mapping))
             .route("/api/idevent", get(get_idevent))
+            .route("/api/days", get(get_days))
+            .route("/api/day", get(get_day))
     }
 }

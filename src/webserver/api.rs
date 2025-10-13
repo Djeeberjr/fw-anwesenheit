@@ -1,11 +1,12 @@
+use esp_println::dbg;
 use picoserve::{
-    extract::{Json, State},
+    extract::{Json, Query, State},
     response::{self, IntoResponse},
 };
 use serde::Deserialize;
 
 use crate::{
-    store::{Name, tally_id::TallyID},
+    store::{self, Name, day::Day, tally_id::TallyID},
     webserver::{app::AppState, sse::IDEvents},
 };
 
@@ -15,27 +16,25 @@ pub struct NewMapping {
     name: Name,
 }
 
-// struct MappingWrapper(IDMapping);
-//
-// impl Serialize for MappingWrapper {
-//     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-//     where
-//         S: serde::Serializer,
-//     {
-//         use serde::ser::SerializeMap;
-//         let mut map = serializer.serialize_map(Some(self.0.id_map.len()))?;
-//         for (k, v) in &self.0.id_map {
-//             map.serialize_entry(tally_id_to_hex_string(*k).unwrap().as_str(), &v)?;
-//         }
-//         map.end()
-//     }
-// }
+#[derive(Deserialize)]
+pub struct QueryTimespan {
+    from: u64,
+    to: u64,
+}
 
+#[derive(Deserialize)]
+pub struct QueryDay {
+    timestamp: Option<u64>,
+    day: Option<u32>,
+}
+
+// GET /api/mapping
 pub async fn get_mapping(State(state): State<AppState>) -> impl IntoResponse {
     let store = state.store.lock().await;
     response::Json(store.mapping.clone())
 }
 
+// POST /api/mapping
 pub async fn add_mapping(
     State(state): State<AppState>,
     Json(data): Json<NewMapping>,
@@ -44,6 +43,41 @@ pub async fn add_mapping(
     store.mapping.add_mapping(data.id, data.name);
 }
 
+// SSE /api/idevent
 pub async fn get_idevent(State(state): State<AppState>) -> impl IntoResponse {
     response::EventStream(IDEvents(state.chan.subscriber().unwrap()))
+}
+
+// GET /api/days
+pub async fn get_days(
+    State(state): State<AppState>,
+    Query(QueryTimespan { from, to }): Query<QueryTimespan>,
+) -> impl IntoResponse {
+    let from_day = Day::new_from_timestamp(from);
+    let to_day = Day::new_from_timestamp(to);
+
+    let mut store = state.store.lock().await;
+
+    let days = store.list_days_in_timespan(from_day, to_day).await;
+
+    response::Json(days)
+}
+
+// GET /api/day
+pub async fn get_day(
+    State(state): State<AppState>,
+    Query(QueryDay { timestamp, day }): Query<QueryDay>,
+) -> Result<impl IntoResponse, impl IntoResponse> {
+
+    let parsed_day = timestamp
+        .map(Day::new_from_timestamp)
+        .or_else(|| day.map(Day::new))
+        .ok_or((response::StatusCode::NOT_FOUND, "Not found"))?;
+
+    let mut store = state.store.lock().await;
+
+    match store.load_day(parsed_day).await {
+        Some(att_day) => Ok(response::Json(att_day)),
+        None => Err((response::StatusCode::NOT_FOUND, "Not found")),
+    }
 }
