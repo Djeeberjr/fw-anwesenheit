@@ -90,4 +90,23 @@ impl<T: Persistence> IDStore<T> {
         }
         changed
     }
+
+    /// Load and return a AttendanceDay. Nothing more. Nothing less.
+    pub async fn load_day(&mut self, day: Day) -> Option<AttendanceDay> {
+        if day == self.current_day.date {
+            return Some(self.current_day.clone());
+        }
+
+        self.persistence_layer.load_day(day).await
+    }
+
+    pub async fn list_days_in_timespan(&mut self, from: Day, to: Day) -> Vec<Day> {
+        let all_days = self.persistence_layer.list_days().await;
+
+        all_days
+            .into_iter()
+            .filter(|e| *e >= from)
+            .filter(|e| *e <= to)
+            .collect()
+    }
 }
