@@ -1,4 +1,6 @@
 use core::cell::RefCell;
+use core::sync::atomic::{AtomicU8, Ordering};
+use alloc::string::ToString;
 use critical_section::Mutex;
 use embassy_executor::Spawner;
 use embassy_net::Stack;
@@ -26,9 +28,12 @@ use esp_hal_smartled::{SmartLedsAdapterAsync, buffer_size_async};
 use esp_println::logger::init_logger;
 use log::{debug, error};
 
+use crate::FEEDBACK_STATE;
+use crate::feedback:: FeedbackState;
 use crate::init::network;
 use crate::init::sd_card::{SDCardPersistence, setup_sdcard};
 use crate::init::wifi;
+use bitflags::bitflags;
 
 /*************************************************
  * GPIO Pinout Xiao Esp32c6
@@ -52,11 +57,38 @@ pub const LED_BUFFER_SIZE: usize = NUM_LEDS * 25;
 
 static SD_DET: Mutex<RefCell<Option<Input>>> = Mutex::new(RefCell::new(None));
 
+static ERR_FLAGS: AtomicU8 = AtomicU8::new(0);
+
+bitflags! {
+    struct Flags: u8 {
+        const ERR_FLG_FEEDBACK = 0b00000001;
+        const ERR_FLG_SDCARD = 0b00000010;
+    }
+}
+
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
-    loop {
-        error!("PANIC: {info}");
+
+    error!("PANIC: {info}");
+
+    let ordering: Ordering = Ordering::Relaxed;
+    let bits = ERR_FLAGS.load(ordering);
+    let flags = Flags::from_bits_truncate(bits);
+
+
+    if !flags.contains(Flags::ERR_FLG_FEEDBACK) {
+        FEEDBACK_STATE.signal(FeedbackState::Error);
     }
+    ERR_FLAGS.fetch_or(Flags::ERR_FLG_FEEDBACK.bits(), ordering);
+    
+
+    if !flags.contains(Flags::ERR_FLG_SDCARD) {
+        let info_str = info.to_string();
+        // TODO: save error string to SD Card
+    }
+    ERR_FLAGS.fetch_or(Flags::ERR_FLG_SDCARD.bits(), ordering);
+
+    loop {}
 }
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -137,9 +169,9 @@ fn setup_uart(
     uart_tx: GPIO16<'static>,
     uart_rx: GPIO17<'static>,
 ) -> Uart<'static, Async> {
-    let uard_device = Uart::new(uart1, esp_hal::uart::Config::default().with_baudrate(9600));
+    let uart_device = Uart::new(uart1, esp_hal::uart::Config::default().with_baudrate(9600));
 
-    match uard_device {
+    match uart_device {
         Ok(block) => block.with_rx(uart_rx).with_tx(uart_tx).into_async(),
         Err(e) => {
             error!("Failed to initialize UART: {e}");
