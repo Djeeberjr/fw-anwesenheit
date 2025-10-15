@@ -44,12 +44,12 @@ type UsedStore = IDStore<SDCardPersistence>;
 
 #[esp_hal_embassy::main]
 async fn main(mut spawner: Spawner) {
-    let (uart_device, stack, _i2c, _led, buzzer_gpio, sd_det_gpio, persistence_layer) =
+    let (uart_device, stack, i2c, led, buzzer_gpio, sd_det_gpio, persistence_layer) =
         init::hardware::hardware_init(&mut spawner).await;
 
     info!("Starting up...");
 
-    let mut rtc = drivers::rtc::RTCClock::new(_i2c).await;
+    let mut rtc = drivers::rtc::RTCClock::new(i2c).await;
 
     let store: UsedStore = IDStore::new_from_storage(persistence_layer).await;
     let shared_store = Rc::new(Mutex::new(store));
@@ -70,7 +70,7 @@ async fn main(mut spawner: Spawner) {
     ));
 
     debug!("spawing feedback task..");
-    spawner.must_spawn(feedback::feedback_task(_led, buzzer_gpio));
+    spawner.must_spawn(feedback::feedback_task(led, buzzer_gpio));
 
     debug!("spawn sd detect task");
     spawner.must_spawn(sd_detect_task(sd_det_gpio));
