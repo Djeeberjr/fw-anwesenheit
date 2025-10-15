@@ -70,7 +70,6 @@ embedded-sdmmc = "0.8.0"
 embedded-hal-bus = "0.3.0"
 serde_json = { version = "1.0.143", default-features = false, features = ["alloc"]}
 embassy-futures = { version = "0.1.2", features = ["log"] }
-bitflags = "2.9.4"
 
 [profile.dev]
 # Rust debug is too slow.

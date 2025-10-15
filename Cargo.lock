@@ -78,9 +78,9 @@ checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
 name = "bitflags"
-version = "2.9.4"
+version = "2.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2261d10cca569e4643e526d8dc2e62e433cc8aba21ab764233731f8d369bf394"
+checksum = "1b8e56985ec62d17e9c1001dc89c88ecd7dc08e47eba5ec7c29c7b5eeecde967"
 
 [[package]]
 name = "bleps"
@@ -714,7 +714,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f3887eda2917deef3d99e7a5c324f9190714e99055361ad36890dffd0a995b49"
 dependencies = [
  "bitfield 0.19.1",
- "bitflags 2.9.4",
+ "bitflags 2.9.1",
  "bytemuck",
  "cfg-if",
  "critical-section",
@@ -1058,7 +1058,6 @@ dependencies = [
 name = "fw-anwesenheit"
 version = "0.1.0"
 dependencies = [
- "bitflags 2.9.4",
  "bleps",
  "chrono",
  "critical-section",
@@ -1413,7 +1412,7 @@ source = "git+https://github.com/sammhicks/picoserve.git?rev=400df53f61137e1bb28
 dependencies = [
  "const-sha1",
  "embassy-net",
- "embassy-time 0.5.0",
+ "embassy-time 0.4.0",
  "embedded-io-async",
  "heapless",
  "log",
@@ -1532,7 +1531,7 @@ version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "679341d22c78c6c649893cbd6c3278dcbe9fc4faa62fea3a9296ae2b50c14625"
 dependencies = [
- "bitflags 2.9.4",
+ "bitflags 2.9.1",
  "memchr",
  "unicase",
 ]
