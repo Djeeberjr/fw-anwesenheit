@@ -1,0 +1,99 @@
+{
+  "mapping": [
+    [
+      "123456789ABC",
+      {
+        "first": "Feuerwehrman",
+        "last": "Sam"
+      }
+    ],
+    [
+      "A1B2C3D4E5F6",
+      {
+        "first": "Luna",
+        "last": "Starforge"
+      }
+    ],
+    [
+      "0F1E2D3C4B5A",
+      {
+        "first": "Gareth",
+        "last": "Ironwill"
+      }
+    ],
+    [
+      "ABCDEF123456",
+      {
+        "first": "Nina",
+        "last": "Skylark"
+      }
+    ],
+    [
+      "654321FEDCBA",
+      {
+        "first": "Tobias",
+        "last": "Marrow"
+      }
+    ],
+    [
+      "DEADBEEFCAFE",
+      {
+        "first": "Astra",
+        "last": "Vale"
+      }
+    ],
+    [
+      "BADA55C0FFEE",
+      {
+        "first": "Rowan",
+        "last": "Tempest"
+      }
+    ],
+    [
+      "C001D00D1337",
+      {
+        "first": "Juniper",
+        "last": "Voss"
+      }
+    ]
+  ],
+  "days": [
+    {
+      "date": 20372,
+      "ids": [
+        "123456789ABC",
+        "A1B2C3D4E5F6"
+      ]
+    },
+    {
+      "date": 20373,
+      "ids": [
+        "0F1E2D3C4B5A",
+        "ABCDEF123456"
+      ]
+    },
+    {
+      "date": 20374,
+      "ids": [
+        "654321FEDCBA",
+        "DEADBEEFCAFE",
+        "BADA55C0FFEE"
+      ]
+    },
+    {
+      "date": 20375,
+      "ids": [
+        "C001D00D1337",
+        "A1B2C3D4E5F6",
+        "123456789ABC"
+      ]
+    },
+    {
+      "date": 20376,
+      "ids": [
+        "N0T3X1ST1D0",
+        "654321FEDCBA"
+      ]
+    }
+  ]
+}

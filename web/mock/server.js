@@ -1,20 +1,14 @@
 import express from "express";
 import bodyParser from "body-parser";
 
+import mockData from "./data.json" with {type: "json"};
+
 const app = express();
 const port = 3000;
 
-app.use(bodyParser.json());
+const SECS_IN_DAY = 86_400;
 
-let mappings = [
-  [
-    "123456789ABC",
-    {
-      first: "Feuerwehrman",
-      last: "Sam",
-    },
-  ],
-];
+app.use(bodyParser.json());
 
 function generateRandomId() {
   const chars = "ABCDEF0123456789";
@@ -27,7 +21,7 @@ function generateRandomId() {
 
 // GET /api/mapping
 app.get("/api/mapping", (req, res) => {
-  res.json(mappings);
+  res.json(mockData.mapping);
 });
 
 // POST /api/mapping
@@ -45,11 +39,45 @@ app.post("/api/mapping", (req, res) => {
   }
 
   // Add new mapping
-  mappings.push([id, name]);
+  mockData.mappings.push([id, name]);
 
   res.status(201).send("");
 });
 
+app.get("/api/day", (req, res) => {
+  let day;
+
+  if (req.query.day) {
+    day = parseInt(req.query.day, 10);
+  }else if (req.query.timestamp) {
+    let ts = parseInt(req.query.timestamp, 10);
+    day = ts / SECS_IN_DAY;
+  }else {
+    return res.status(400).json({ error: "Missing or invalid 'day' parameter" });
+  }
+
+  if (isNaN(day)) {
+    return res.status(400).json({ error: "Missing or invalid 'day' parameter" });
+  }
+
+  let foundDay = mockData.days.find(e => e.date == day);
+
+  if (!foundDay) {
+    return res.status(404).send("Not found");
+  }
+
+  res.status(200).json(foundDay);
+});
+
+app.get("/api/days", (req,res) => {
+
+  let qFrom = parseInt(req.query.from) / SECS_IN_DAY;
+  let qTo = parseInt(req.query.to) / SECS_IN_DAY;
+
+  let days = mockData.days.filter(e => e.date >= qFrom && e.date <= qTo).map(e => e.date);
+
+  res.status(200).json(days);
+});
 
 // SSE route: /api/idevent
 app.get("/api/idevent", (req, res) => {
