@@ -3,8 +3,8 @@ use critical_section::Mutex;
 use embassy_executor::Spawner;
 use embassy_net::Stack;
 use embassy_time::{Duration, Timer};
-use esp_hal::delay::Delay;
 use esp_hal::Blocking;
+use esp_hal::delay::Delay;
 use esp_hal::gpio::Input;
 use esp_hal::i2c::master::Config;
 use esp_hal::peripherals::{
@@ -13,6 +13,7 @@ use esp_hal::peripherals::{
 };
 use esp_hal::rmt::{ConstChannelAccess, Rmt};
 use esp_hal::spi::master::{Config as Spi_config, Spi};
+use esp_hal::system::software_reset;
 use esp_hal::time::Rate;
 use esp_hal::timer::timg::TimerGroup;
 use esp_hal::{
@@ -23,7 +24,6 @@ use esp_hal::{
     timer::systimer::SystemTimer,
     uart::Uart,
 };
-use esp_hal::system::software_reset;
 use esp_hal_smartled::{SmartLedsAdapterAsync, buffer_size_async};
 use esp_println::logger::init_logger;
 use log::{debug, error};
@@ -56,12 +56,10 @@ static SD_DET: Mutex<RefCell<Option<Input>>> = Mutex::new(RefCell::new(None));
 
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
-    let mut delay = Delay::new();
-    loop {
-        error!("PANIC: {info}");
-        delay.delay_millis(6000 as u32); //10min
-        software_reset();
-    }
+    let delay = Delay::new();
+    error!("PANIC: {info}");
+    delay.delay(esp_hal::time::Duration::from_secs(30));
+    software_reset()
 }
 
 esp_bootloader_esp_idf::esp_app_desc!();
