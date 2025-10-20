@@ -3,15 +3,21 @@
   import IDTable from "./lib/IDTable.svelte";
   import LastId from "./lib/LastID.svelte";
   import AddIDModal from "./lib/AddIDModal.svelte";
+  import ExportModal from "./lib/ExportModal.svelte";
+  import { generateCSVFile } from "./lib/exporting";
+  import { fetchMapping, type IDMap } from "./lib/IDMapping";
+  import { downloadBlob } from "./lib/downloadBlob";
 
   let lastID: string = $state("");
+  let mapping: IDMap | null = $state(null);
 
   let addModal: AddIDModal;
-  let idTable: IDTable;
+  let exportModal: ExportModal;
 
-  onMount(() => {
+  onMount(async () => {
+    mapping = await fetchMapping();
+
     let sse = new EventSource("/api/idevent");
-
     sse.onmessage = (e) => {
       lastID = e.data;
     };
@@ -25,13 +31,14 @@
     <h1 class="text-3xl sm:text-4xl font-bold text-gray-800">Anwesenheit</h1>
   </div>
 
-  <a
+  <button
     class="px-6 py-3 text-lg font-semibold text-white bg-indigo-600 rounded-2xl shadow-md hover:bg-indigo-700 transition"
-    href="/api/csv"
-    download="anwesenheit.csv"
+    onclick={() => {
+      exportModal.open();
+    }}
   >
-    Download CSV
-  </a>
+    Export CSV
+  </button>
 
   <div class="pt-3 pb-2">
     <LastId
@@ -42,15 +49,32 @@
     />
   </div>
   <div>
-    <IDTable bind:this={idTable} onEdit={(id,firstName,lastName)=>{
-      addModal.open(id,firstName,lastName);
-    }}/>
+    {#if mapping}
+      <IDTable
+        data={mapping}
+        onEdit={(id, firstName, lastName) => {
+          addModal.open(id, firstName, lastName);
+        }}
+      />
+    {/if}
   </div>
 
   <AddIDModal
     bind:this={addModal}
-    onSubmitted={() => {
-      idTable.reloadData();
+    onSubmitted={async () => {
+      mapping = await fetchMapping();
+    }}
+  />
+
+  <ExportModal
+    bind:this={exportModal}
+    onSubmitted={async (from, to) => {
+      if (!mapping) {
+        return;
+      }
+      let csvFile = await generateCSVFile(from, to, mapping);
+
+      downloadBlob("export.csv",csvFile,"text/csv");
     }}
   />
 </main>

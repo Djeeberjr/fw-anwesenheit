@@ -1,16 +1,13 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import { fetchMapping, type IDMap } from "./IDMapping";
-  let data: IDMap | undefined = $state();
+  import { type IDMap } from "./IDMapping";
 
   let {
     onEdit,
-  }: { onEdit?: (id: string, firstName: string, lastName: string) => void } =
-    $props();
-
-  export async function reloadData() {
-    data = await fetchMapping();
-  }
+    data,
+  }: {
+    onEdit?: (id: string, firstName: string, lastName: string) => void;
+    data: IDMap;
+  } = $props();
 
   let rows = $derived(
     data
@@ -44,69 +41,61 @@
     if (sortKey !== key) return "";
     return sortDirection === "asc" ? "▲" : "▼";
   }
-
-  onMount(async () => {
-    await reloadData();
-  });
 </script>
 
-{#if data == null}
-  Loading...
-{:else}
-  <div class="bg-indigo-500 py-2 rounded-2xl overflow-x-auto">
-    <table class="px-10">
-      <thead>
-        <tr>
-          <th
-            class="text-left pr-5 pl-2 cursor-pointer select-none"
-            onclick={() => {
-              handleSortClick("id");
-            }}
-          >
-            ID
-            <span class="indicator">{indicator("id")}</span>
-          </th>
-          <th
-            class="text-left pr-5 cursor-pointer select-none"
-            onclick={() => {
-              handleSortClick("last");
-            }}
-          >
-            Nachname
-            <span class="indicator">{indicator("last")}</span>
-          </th>
-          <th
-            class="text-left pr-5 cursor-pointer select-none"
-            onclick={() => {
-              handleSortClick("first");
-            }}
-            >Vorname
+<div class="bg-indigo-500 py-2 rounded-2xl overflow-x-auto">
+  <table class="px-10">
+    <thead>
+      <tr>
+        <th
+          class="text-left pr-5 pl-2 cursor-pointer select-none"
+          onclick={() => {
+            handleSortClick("id");
+          }}
+        >
+          ID
+          <span class="indicator">{indicator("id")}</span>
+        </th>
+        <th
+          class="text-left pr-5 cursor-pointer select-none"
+          onclick={() => {
+            handleSortClick("last");
+          }}
+        >
+          Nachname
+          <span class="indicator">{indicator("last")}</span>
+        </th>
+        <th
+          class="text-left pr-5 cursor-pointer select-none"
+          onclick={() => {
+            handleSortClick("first");
+          }}
+          >Vorname
 
-            <span class="indicator">{indicator("first")}</span>
-          </th>
-          <th> </th>
+          <span class="indicator">{indicator("first")}</span>
+        </th>
+        <th> </th>
+      </tr>
+    </thead>
+    <tbody>
+      {#each rowsSorted as row}
+        <tr class="even:bg-indigo-600">
+          <td class="whitespace-nowrap pr-5 pl-2 py-1">{row.id}</td>
+          <td class="whitespace-nowrap pr-5">{row.last}</td>
+          <td class="whitespace-nowrap pr-5">{row.first}</td>
+          <td class="pr-5"
+            ><button
+              onclick={() => {
+                onEdit && onEdit(row.id, row.first, row.last);
+              }}
+              class="cursor-pointer">🔧</button
+            ></td
+          >
         </tr>
-      </thead>
-      <tbody>
-        {#each rowsSorted as row}
-          <tr class="even:bg-indigo-600">
-            <td class="whitespace-nowrap pr-5 pl-2 py-1">{row.id}</td>
-            <td class="whitespace-nowrap pr-5">{row.last}</td>
-            <td class="whitespace-nowrap pr-5">{row.first}</td>
-            <td class="pr-5"
-              ><button
-                onclick={() => {
-                  onEdit && onEdit(row.id, row.first, row.last);
-                }}
-                class="cursor-pointer">🔧</button
-              ></td
-            >
-          </tr>
-        {/each}
-      </tbody>
-    </table>
-  </div>
-{/if}
+      {/each}
+    </tbody>
+  </table>
+</div>
 
 <style lang="css" scoped>
   @reference "../app.css";
