@@ -1,10 +1,9 @@
 interface CSVOptions {
-  delimiter?: string;             // default: ","
-  includeHeader?: boolean;        // default: true for object input, false for array-of-arrays unless headers provided
-  headerOrder?: string[];         // explicit ordering for columns that should come first
-  eol?: string;                   // default: "\r\n"
-  includeBOM?: boolean;           // default: false (useful for Excel)
-  nullString?: string;            // default: "" (how to render null/undefined)
+  delimiter?: string;
+  headerOrder?: string[];
+  eol?: string;
+  includeBOM?: boolean;
+  nullString?: string;
 }
 
 type RowObject = Record<string, any>;
@@ -13,7 +12,6 @@ type InputRows = RowObject[];
 export function generateCSVString(input: InputRows, opts: CSVOptions = {}): string {
   const {
     delimiter = ",",
-    includeHeader,
     headerOrder,
     eol = "\r\n",
     includeBOM = false,
@@ -29,7 +27,7 @@ export function generateCSVString(input: InputRows, opts: CSVOptions = {}): stri
   const escapeCell = (raw: any): string => {
     if (raw === null || raw === undefined) return nullString;
 
-    let s = defaultStringify(raw);
+    let s = stringify(raw);
 
     // Replace quotes 
     if (s.includes('"')) s = s.replace(/"/g, '""');
@@ -38,7 +36,7 @@ export function generateCSVString(input: InputRows, opts: CSVOptions = {}): stri
   };
 
   // Transform the value of a cell into a string
-  function defaultStringify(v: any): string {
+  function stringify(v: any): string {
     if (v === null || v === undefined) return nullString;
     if (v instanceof Date) return v.toLocaleDateString();
     if (typeof v === "boolean") return v ? "X" : "";
@@ -79,10 +77,9 @@ export function generateCSVString(input: InputRows, opts: CSVOptions = {}): stri
     finalHeaders = first.concat(rest);
   }
 
-  const shouldIncludeHeader = typeof includeHeader === "boolean" ? includeHeader : finalHeaders.length > 0;
   const rowsOut: string[] = [];
 
-  if (shouldIncludeHeader && finalHeaders.length) {
+  if (finalHeaders.length > 0) {
     rowsOut.push(finalHeaders.map(h => escapeCell(h)).join(delimiter));
   }
 
