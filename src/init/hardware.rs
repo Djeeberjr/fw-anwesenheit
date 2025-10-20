@@ -3,6 +3,7 @@ use critical_section::Mutex;
 use embassy_executor::Spawner;
 use embassy_net::Stack;
 use embassy_time::{Duration, Timer};
+use esp_hal::delay::Delay;
 use esp_hal::Blocking;
 use esp_hal::gpio::Input;
 use esp_hal::i2c::master::Config;
@@ -22,6 +23,7 @@ use esp_hal::{
     timer::systimer::SystemTimer,
     uart::Uart,
 };
+use esp_hal::system::software_reset;
 use esp_hal_smartled::{SmartLedsAdapterAsync, buffer_size_async};
 use esp_println::logger::init_logger;
 use log::{debug, error};
@@ -54,8 +56,11 @@ static SD_DET: Mutex<RefCell<Option<Input>>> = Mutex::new(RefCell::new(None));
 
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
+    let mut delay = Delay::new();
     loop {
         error!("PANIC: {info}");
+        delay.delay_millis(6000 as u32); //10min
+        software_reset();
     }
 }
 
