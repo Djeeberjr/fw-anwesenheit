@@ -11,10 +11,10 @@ type InputRows = RowObject[];
 
 export function generateCSVString(input: InputRows, opts: CSVOptions = {}): string {
   const {
-    delimiter = ",",
+    delimiter = ";",
     headerOrder,
     eol = "\r\n",
-    includeBOM = false,
+    includeBOM = true,
     nullString = "",
   } = opts;
 
