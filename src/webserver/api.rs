@@ -1,4 +1,5 @@
 use esp_println::dbg;
+use log::error;
 use picoserve::{
     extract::{Json, Query, State},
     response::{self, IntoResponse},
@@ -44,8 +45,19 @@ pub async fn add_mapping(
 }
 
 // SSE /api/idevent
-pub async fn get_idevent(State(state): State<AppState>) -> impl IntoResponse {
-    response::EventStream(IDEvents(state.chan.subscriber().unwrap()))
+pub async fn get_idevent(
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, impl IntoResponse> {
+    match state.chan.subscriber() {
+        Ok(chan) => Ok(response::EventStream(IDEvents(chan))),
+        Err(e) => {
+            error!("Failed to create SSE: {:?}", e);
+            Err((
+                response::StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal server error",
+            ))
+        }
+    }
 }
 
 // GET /api/days
@@ -68,7 +80,6 @@ pub async fn get_day(
     State(state): State<AppState>,
     Query(QueryDay { timestamp, day }): Query<QueryDay>,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
-
     let parsed_day = timestamp
         .map(Day::new_from_timestamp)
         .or_else(|| day.map(Day::new))
