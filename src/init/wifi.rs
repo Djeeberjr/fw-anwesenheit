@@ -2,7 +2,9 @@ use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use esp_hal::gpio::{Output, OutputConfig};
 use esp_hal::peripherals::{GPIO3, GPIO14, WIFI};
-use esp_wifi::wifi::{AccessPointConfiguration, Configuration, WifiController, WifiEvent, WifiState};
+use esp_wifi::wifi::{
+    AccessPointConfiguration, Configuration, WifiController, WifiEvent, WifiState,
+};
 use esp_wifi::{EspWifiRngSource, EspWifiTimerSource, wifi::Interfaces};
 use static_cell::make_static;
 
@@ -46,7 +48,9 @@ async fn connection(mut controller: WifiController<'static>) {
         }
         if !matches!(controller.is_started(), Ok(true)) {
             let client_config = Configuration::AccessPoint(AccessPointConfiguration {
-                ssid: "esp-wifi".try_into().unwrap(),
+                ssid: env!("WIFI_SSID").try_into().unwrap(),
+                password: env!("WIFI_PASSWD").try_into().unwrap(),
+                auth_method: esp_wifi::wifi::AuthMethod::WPA2Personal,
                 ..Default::default()
             });
             controller.set_configuration(&client_config).unwrap();

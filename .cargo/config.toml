@@ -12,3 +12,7 @@ target = "riscv32imac-unknown-none-elf"
 
 [unstable]
 build-std = ["alloc", "core"]
+
+[env]
+WIFI_PASSWD = "hunter22"
+WIFI_SSID = "fwa"
