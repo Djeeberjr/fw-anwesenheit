@@ -66,7 +66,7 @@ impl<T: Persistence> IDStore<T> {
             .await
     }
 
-    async fn persist_mapping(&mut self) {
+    pub async fn persist_mapping(&mut self) {
         self.persistence_layer.save_mapping(&self.mapping).await
     }
 

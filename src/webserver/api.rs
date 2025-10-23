@@ -42,6 +42,7 @@ pub async fn add_mapping(
 ) -> impl IntoResponse {
     let mut store = state.store.lock().await;
     store.mapping.add_mapping(data.id, data.name);
+    store.persist_mapping().await;
 }
 
 // SSE /api/idevent
