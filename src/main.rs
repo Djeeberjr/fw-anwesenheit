@@ -3,6 +3,8 @@
 #![feature(type_alias_impl_trait)]
 #![feature(impl_trait_in_assoc_type)]
 
+#![warn(clippy::unwrap_used)]
+
 use alloc::rc::Rc;
 use embassy_executor::Spawner;
 use embassy_net::Stack;
