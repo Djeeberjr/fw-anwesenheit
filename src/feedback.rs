@@ -46,6 +46,12 @@ pub async fn feedback_task(
                 Timer::after(Duration::from_millis(100)).await;
                 buzzer.set_low();
                 Timer::after(Duration::from_millis(50)).await;
+                led.write(brightness(
+                    [BLACK; init::hardware::NUM_LEDS].into_iter(),
+                    LED_LEVEL,
+                ))
+                .await
+                .unwrap();
             }
             FeedbackState::Nack => {
                 led.write(brightness(
@@ -118,7 +124,7 @@ pub async fn feedback_task(
             }
             FeedbackState::Idle => {
                 led.write(brightness(
-                    [GREEN; init::hardware::NUM_LEDS].into_iter(),
+                    [BLACK; init::hardware::NUM_LEDS].into_iter(),
                     LED_LEVEL,
                 ))
                 .await
