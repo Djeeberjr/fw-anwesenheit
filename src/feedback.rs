@@ -1,7 +1,5 @@
 use embassy_time::{Duration, Timer};
-use esp_hal::gpio::{AnyPin, Output};
-use esp_hal::peripherals;
-use esp_hal::twai::TimingConfig;
+use esp_hal::gpio::Output;
 use esp_hal_smartled::SmartLedsAdapterAsync;
 use log::debug;
 use smart_leds::SmartLedsWriteAsync;
