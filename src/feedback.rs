@@ -1,8 +1,6 @@
 use embassy_time::{Duration, Timer};
-use esp_hal::peripherals::RMT;
 use esp_hal::rmt::Rmt;
-use esp_hal::time::Rate;
-use esp_hal::{peripherals, rmt};
+use esp_hal::peripherals;
 use esp_hal_smartled::{SmartLedsAdapterAsync, buffer_size_async};
 use log::debug;
 use smart_leds::SmartLedsWriteAsync;
