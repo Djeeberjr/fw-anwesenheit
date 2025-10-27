@@ -23,6 +23,9 @@ use esp_hal::{
 use esp_hal_smartled::{SmartLedsAdapterAsync, buffer_size_async};
 use esp_println::logger::init_logger;
 use log::{debug, error};
+use smart_leds::SmartLedsWriteAsync;
+use smart_leds::brightness;
+use smart_leds::colors::RED;
 use thiserror::Error;
 
 use crate::init::network;
@@ -101,6 +104,13 @@ impl AppHardware {
 
         init_logger(log::LevelFilter::Debug);
 
+        let mut led = setup_led(peripherals.RMT, peripherals.GPIO1)?;
+        let _ = led.write(brightness(
+                    [RED; NUM_LEDS].into_iter(),
+                    255,
+                ))
+                .await;
+
         let rng = esp_hal::rng::Rng::new();
         let network_seed = (rng.random() as u64) << 32 | rng.random() as u64;
 
@@ -133,8 +143,6 @@ impl AppHardware {
 
         let buzzer_gpio = peripherals.GPIO21;
         let buzzer = setup_buzzer(buzzer_gpio);
-
-        let led = setup_led(peripherals.RMT, peripherals.GPIO1)?;
 
         Timer::after(Duration::from_millis(500)).await;
 
