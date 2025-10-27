@@ -11,6 +11,7 @@ use esp_hal::peripherals::{
     GPIO0, GPIO1, GPIO16, GPIO17, GPIO18, GPIO19, GPIO20, GPIO21, GPIO22, GPIO23, I2C0, RMT, SPI2,
     UART1,
 };
+use esp_hal::rmt::Rmt;
 use esp_hal::spi::master::{Config as Spi_config, Spi};
 use esp_hal::system::software_reset;
 use esp_hal::time::Rate;
@@ -23,6 +24,7 @@ use esp_hal::{
     timer::systimer::SystemTimer,
     uart::Uart,
 };
+use esp_hal_smartled::{SmartLedsAdapterAsync, buffer_size_async};
 use esp_println::logger::init_logger;
 use log::{debug, error};
 
@@ -47,8 +49,8 @@ use crate::init::wifi;
  *
  *************************************************/
 
-pub const NUM_LEDS: usize = 66;
-pub const LED_BUFFER_SIZE: usize = NUM_LEDS * 25;
+pub const NUM_LEDS: usize = 1;
+pub const LED_BUFFER_SIZE: usize = buffer_size_async(NUM_LEDS);
 
 static SD_DET: Mutex<RefCell<Option<Input>>> = Mutex::new(RefCell::new(None));
 
@@ -70,6 +72,7 @@ pub async fn hardware_init(
     I2c<'static, Async>,
     GPIO21<'static>,
     GPIO0<'static>,
+    SmartLedsAdapterAsync<'static, LED_BUFFER_SIZE>,
     SDCardPersistence,
 ) {
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
@@ -116,6 +119,8 @@ pub async fn hardware_init(
 
     let buzzer_gpio = peripherals.GPIO21;
 
+    let led = setup_led(peripherals.RMT, peripherals.GPIO1);
+
     Timer::after(Duration::from_millis(500)).await;
 
     debug!("hardware init done");
@@ -126,6 +131,7 @@ pub async fn hardware_init(
         i2c_device,
         buzzer_gpio,
         sd_det_gpio,
+        led,
         vol_mgr,
     )
 }
@@ -184,23 +190,19 @@ pub fn setup_buzzer(buzzer_gpio: GPIO21<'static>) -> Output<'static> {
     buzzer
 }
 
-// fn setup_led(
-//     rmt: RMT<'static>,
-//     led_gpio: GPIO1<'static>,
-// ) -> SmartLedsAdapterAsync<ConstChannelAccess<esp_hal::rmt::Tx, 0>, LED_BUFFER_SIZE> {
-//     debug!("setup led");
-//     let rmt: Rmt<'_, esp_hal::Async> = {
-//         let frequency: Rate = Rate::from_mhz(80);
-//         Rmt::new(rmt, frequency)
-//     }
-//     .expect("Failed to initialize RMT")
-//     .into_async();
-//
-//     let rmt_channel = rmt.channel0;
-//     let rmt_buffer = [0_u32; buffer_size_async(NUM_LEDS)];
-//
-//     let led: SmartLedsAdapterAsync<_, LED_BUFFER_SIZE> =
-//         SmartLedsAdapterAsync::new(rmt_channel, led_gpio, rmt_buffer);
-//
-//     led
-// }
+fn setup_led<'a>(
+    rmt: RMT<'a>,
+    led_gpio: GPIO1<'a>,
+) -> esp_hal_smartled::SmartLedsAdapterAsync<'a, LED_BUFFER_SIZE> {
+    let rmt: Rmt<'_, esp_hal::Async> = {
+        let frequency: Rate = Rate::from_mhz(80);
+        Rmt::new(rmt, frequency)
+    }
+    .expect("Failed to initialize RMT")
+    .into_async();
+
+    let rmt_channel = rmt.channel0;
+    let rmt_buffer = [esp_hal::rmt::PulseCode::default(); LED_BUFFER_SIZE];
+
+    SmartLedsAdapterAsync::new(rmt_channel, led_gpio, rmt_buffer)
+}
