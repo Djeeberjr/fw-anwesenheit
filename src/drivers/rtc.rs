@@ -1,7 +1,6 @@
 use chrono::{TimeZone, Utc};
 use ds3231::{
-    Config, DS3231, InterruptControl, Oscillator, SquareWaveFrequency,
-    TimeRepresentation,
+    Config, DS3231, InterruptControl, Oscillator, SquareWaveFrequency, TimeRepresentation,
 };
 use esp_hal::{
     Async,
@@ -30,9 +29,7 @@ impl RTCClock {
 
     pub async fn get_time(&mut self) -> u64 {
         match self.dev.datetime().await {
-            Ok(datetime) => {
-                datetime.and_utc().timestamp() as u64
-            }
+            Ok(datetime) => datetime.and_utc().timestamp() as u64,
             Err(e) => {
                 FEEDBACK_STATE.signal(feedback::FeedbackState::Error);
                 error!("Failed to read RTC datetime: {:?}", e);
@@ -67,11 +64,13 @@ pub async fn rtc_config(i2c: I2c<'static, Async>) -> DS3231<I2c<'static, Async>>
         }
     }
 
-    rtc.set_datetime(&naive_dt).await.unwrap_or_else(|e| {
-        FEEDBACK_STATE.signal(feedback::FeedbackState::Error);
-        error!("Failed to set RTC datetime: {:?}", e);
-    });
-    info!("RTC datetime set to: {}", naive_dt);
+    if rtc.datetime().await.unwrap() < naive_dt {
+        rtc.set_datetime(&naive_dt).await.unwrap_or_else(|e| {
+            FEEDBACK_STATE.signal(feedback::FeedbackState::Error);
+            error!("Failed to set RTC datetime: {:?}", e);
+        });
+        info!("RTC datetime set to: {}", naive_dt);
+    }
 
     match rtc.status().await {
         Ok(mut status) => {
@@ -84,6 +83,5 @@ pub async fn rtc_config(i2c: I2c<'static, Async>) -> DS3231<I2c<'static, Async>>
         }
         Err(e) => info!("Failed to read status: {:?}", e),
     }
-
     rtc
 }
