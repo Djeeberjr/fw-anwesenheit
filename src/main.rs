@@ -17,7 +17,7 @@ use embassy_sync::{
     signal::Signal,
 };
 use embassy_time::{Duration, Timer};
-use esp_hal::gpio::Input;
+use esp_hal::gpio::{AnyPin, Input};
 use esp_hal::{gpio::InputConfig, peripherals};
 use log::{debug, info};
 use static_cell::StaticCell;
@@ -25,7 +25,7 @@ use static_cell::StaticCell;
 extern crate alloc;
 
 use crate::{
-    init::sd_card::SDCardPersistence,
+    init::{hardware::AppHardware, sd_card::SDCardPersistence},
     store::{IDStore, day::Day, tally_id::TallyID},
     webserver::start_webserver,
 };
@@ -47,36 +47,43 @@ static CHAN: StaticCell<TallyChannel> = StaticCell::new();
 
 #[esp_rtos::main]
 async fn main(spawner: Spawner) -> ! {
-    let (uart_device, stack, i2c, buzzer_gpio, sd_det_gpio, led, persistence_layer) =
-        init::hardware::hardware_init(spawner).await;
+    let app_hardware = AppHardware::init(spawner).await.unwrap();
 
     info!("Starting up...");
 
-    let mut rtc = drivers::rtc::RTCClock::new(i2c).await;
+    let mut rtc = drivers::rtc::RTCClock::new(app_hardware.i2c).await;
 
-    let store: UsedStore = IDStore::new_from_storage(persistence_layer).await;
+    let store: UsedStore = IDStore::new_from_storage(app_hardware.sdcard).await;
     let shared_store = Rc::new(Mutex::new(store));
 
     let chan: &'static mut TallyChannel = CHAN.init(PubSubChannel::new());
     let publisher: TallyPublisher = chan.publisher().unwrap();
     let mut sub: TallySubscriber = chan.subscriber().unwrap();
 
-    wait_for_stack_up(stack).await;
+    wait_for_stack_up(app_hardware.network_stack).await;
 
-    start_webserver(spawner, stack, shared_store.clone(), chan);
+    start_webserver(
+        spawner,
+        app_hardware.network_stack,
+        shared_store.clone(),
+        chan,
+    );
 
     /****************************** Spawning tasks ***********************************/
     debug!("spawing NFC reader task...");
     spawner.must_spawn(drivers::nfc_reader::rfid_reader_task(
-        uart_device,
+        app_hardware.uart,
         publisher,
     ));
 
     debug!("spawing feedback task..");
-    spawner.must_spawn(feedback::feedback_task(led, buzzer_gpio));
+    spawner.must_spawn(feedback::feedback_task(
+        app_hardware.led,
+        app_hardware.buzzer,
+    ));
 
     debug!("spawn sd detect task");
-    spawner.must_spawn(sd_detect_task(sd_det_gpio));
+    spawner.must_spawn(sd_detect_task(app_hardware.sd_present));
     /******************************************************************************/
 
     debug!("everything spawned");
@@ -101,7 +108,7 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 #[embassy_executor::task]
-async fn sd_detect_task(sd_det_gpio: peripherals::GPIO0<'static>) {
+async fn sd_detect_task(sd_det_gpio: AnyPin<'static>) {
     let mut sd_det = Input::new(sd_det_gpio, InputConfig::default());
     sd_det.wait_for(esp_hal::gpio::Event::AnyEdge).await;
 

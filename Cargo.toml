@@ -50,6 +50,7 @@ smart-leds = "0.4.0"
 
 embedded-sdmmc = "0.8.0"
 embedded-hal-bus = "0.3.0"
+thiserror = { version = "2.0.17", default-features = false }
 
 [profile.dev]
 # Rust debug is too slow.

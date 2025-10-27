@@ -1156,6 +1156,7 @@ dependencies = [
  "smart-leds",
  "smoltcp",
  "static_cell",
+ "thiserror",
 ]
 
 [[package]]

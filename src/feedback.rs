@@ -1,4 +1,5 @@
 use embassy_time::{Duration, Timer};
+use esp_hal::gpio::{AnyPin, Output};
 use esp_hal::peripherals;
 use esp_hal_smartled::SmartLedsAdapterAsync;
 use log::debug;
@@ -26,10 +27,9 @@ const LED_LEVEL: u8 = 255;
 #[embassy_executor::task]
 pub async fn feedback_task(
     mut led: SmartLedsAdapterAsync<'static, { hardware::LED_BUFFER_SIZE }>,
-    buzzer: peripherals::GPIO21<'static>,
+    mut buzzer: Output<'static>,
 ) {
     debug!("Starting feedback task");
-    let mut buzzer = init::hardware::setup_buzzer(buzzer);
     loop {
         let feedback_state = FEEDBACK_STATE.wait().await;
         match feedback_state {
