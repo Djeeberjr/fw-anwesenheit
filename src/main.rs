@@ -17,8 +17,8 @@ use embassy_sync::{
     signal::Signal,
 };
 use embassy_time::{Duration, Timer};
+use esp_hal::gpio::InputConfig;
 use esp_hal::gpio::{AnyPin, Input};
-use esp_hal::{gpio::InputConfig, peripherals};
 use log::{debug, info};
 use static_cell::StaticCell;
 
@@ -53,7 +53,8 @@ async fn main(spawner: Spawner) -> ! {
 
     let mut rtc = drivers::rtc::RTCClock::new(app_hardware.i2c).await;
 
-    let store: UsedStore = IDStore::new_from_storage(app_hardware.sdcard).await;
+    let current_day: Day = rtc.get_time().await.into();
+    let store: UsedStore = IDStore::new_from_storage(app_hardware.sdcard, current_day).await;
     let shared_store = Rc::new(Mutex::new(store));
 
     let chan: &'static mut TallyChannel = CHAN.init(PubSubChannel::new());

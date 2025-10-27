@@ -40,13 +40,11 @@ pub struct IDStore<T: Persistence> {
 }
 
 impl<T: Persistence> IDStore<T> {
-    pub async fn new_from_storage(mut persistence_layer: T) -> Self {
+    pub async fn new_from_storage(mut persistence_layer: T, current_date: Day) -> Self {
         let mapping = match persistence_layer.load_mapping().await {
             Some(map) => map,
             None => IDMapping::new(),
         };
-
-        let current_date: Day = Day::new(1);
 
         let day = persistence_layer
             .load_day(current_date)
