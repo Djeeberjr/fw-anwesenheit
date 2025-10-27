@@ -49,7 +49,7 @@ use crate::init::wifi;
  *
  *************************************************/
 
-pub const NUM_LEDS: usize = 66;
+pub const NUM_LEDS: usize = 1;
 pub const LED_BUFFER_SIZE: usize = NUM_LEDS * 25;
 
 static SD_DET: Mutex<RefCell<Option<Input>>> = Mutex::new(RefCell::new(None));
