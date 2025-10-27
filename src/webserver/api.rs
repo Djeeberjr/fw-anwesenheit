@@ -1,4 +1,3 @@
-use esp_println::dbg;
 use log::error;
 use picoserve::{
     extract::{Json, Query, State},
@@ -7,7 +6,7 @@ use picoserve::{
 use serde::Deserialize;
 
 use crate::{
-    store::{self, Name, day::Day, tally_id::TallyID},
+    store::{Name, day::Day, tally_id::TallyID},
     webserver::{app::AppState, sse::IDEvents},
 };
 

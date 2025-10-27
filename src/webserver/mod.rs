@@ -16,10 +16,10 @@ mod app;
 mod assets;
 mod sse;
 
-pub const WEB_TAKS_SIZE: usize = 3; // Up this number if request start fail with Timeouts.
+pub const WEB_TAKS_SIZE: usize = 5; // Up this number if request start fail with Timeouts.
 
 pub fn start_webserver(
-    spawner: &mut Spawner,
+    spawner: Spawner,
     stack: Stack<'static>,
     store: Rc<Mutex<CriticalSectionRawMutex, UsedStore>>,
     chan: &'static TallyChannel,

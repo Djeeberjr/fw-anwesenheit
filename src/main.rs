@@ -2,7 +2,6 @@
 #![no_main]
 #![feature(type_alias_impl_trait)]
 #![feature(impl_trait_in_assoc_type)]
-
 #![warn(clippy::unwrap_used)]
 
 use alloc::rc::Rc;
@@ -21,7 +20,7 @@ use embassy_time::{Duration, Timer};
 use esp_hal::gpio::Input;
 use esp_hal::{gpio::InputConfig, peripherals};
 use log::{debug, info};
-use static_cell::make_static;
+use static_cell::StaticCell;
 
 extern crate alloc;
 
@@ -44,10 +43,12 @@ type TallyPublisher = Publisher<'static, NoopRawMutex, TallyID, 8, 2, 1>;
 type TallySubscriber = Subscriber<'static, NoopRawMutex, TallyID, 8, 2, 1>;
 type UsedStore = IDStore<SDCardPersistence>;
 
-#[esp_hal_embassy::main]
-async fn main(mut spawner: Spawner) {
-    let (uart_device, stack, i2c, led, buzzer_gpio, sd_det_gpio, persistence_layer) =
-        init::hardware::hardware_init(&mut spawner).await;
+static CHAN: StaticCell<TallyChannel> = StaticCell::new();
+
+#[esp_rtos::main]
+async fn main(spawner: Spawner) -> ! {
+    let (uart_device, stack, i2c, buzzer_gpio, sd_det_gpio, persistence_layer) =
+        init::hardware::hardware_init(spawner).await;
 
     info!("Starting up...");
 
@@ -56,13 +57,13 @@ async fn main(mut spawner: Spawner) {
     let store: UsedStore = IDStore::new_from_storage(persistence_layer).await;
     let shared_store = Rc::new(Mutex::new(store));
 
-    let chan: &'static mut TallyChannel = make_static!(PubSubChannel::new());
+    let chan: &'static mut TallyChannel = CHAN.init(PubSubChannel::new());
     let publisher: TallyPublisher = chan.publisher().unwrap();
     let mut sub: TallySubscriber = chan.subscriber().unwrap();
 
     wait_for_stack_up(stack).await;
 
-    start_webserver(&mut spawner, stack, shared_store.clone(), chan);
+    start_webserver(spawner, stack, shared_store.clone(), chan);
 
     /****************************** Spawning tasks ***********************************/
     debug!("spawing NFC reader task...");
@@ -71,8 +72,8 @@ async fn main(mut spawner: Spawner) {
         publisher,
     ));
 
-    debug!("spawing feedback task..");
-    spawner.must_spawn(feedback::feedback_task(led, buzzer_gpio));
+    // debug!("spawing feedback task..");
+    // spawner.must_spawn(feedback::feedback_task(led, buzzer_gpio));
 
     debug!("spawn sd detect task");
     spawner.must_spawn(sd_detect_task(sd_det_gpio));
