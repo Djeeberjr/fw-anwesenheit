@@ -3,11 +3,10 @@ use embassy_net::Stack;
 use embassy_time::{Duration, Timer};
 use esp_hal::Blocking;
 use esp_hal::delay::Delay;
-use esp_hal::gpio::{AnyPin};
+use esp_hal::gpio::AnyPin;
 use esp_hal::i2c::master::Config;
 use esp_hal::peripherals::{
-    GPIO1, GPIO16, GPIO17, GPIO18, GPIO19, GPIO20, GPIO21, GPIO22, GPIO23, I2C0, RMT, SPI2,
-    UART1,
+    GPIO1, GPIO16, GPIO17, GPIO18, GPIO19, GPIO20, GPIO21, GPIO22, GPIO23, I2C0, RMT, SPI2, UART1,
 };
 use esp_hal::rmt::Rmt;
 use esp_hal::spi::master::{Config as Spi_config, Spi};
@@ -73,6 +72,9 @@ pub enum HardwareInitError {
 
     #[error("Failed to setuo LED")]
     Led(#[from] esp_hal::rmt::Error),
+
+    #[error("Failed to setup wifi")]
+    Wifi(#[from] wifi::WifiError),
 }
 
 pub struct AppHardware {
@@ -103,7 +105,7 @@ impl AppHardware {
         let network_seed = (rng.random() as u64) << 32 | rng.random() as u64;
 
         wifi::set_antenna_mode(peripherals.GPIO3, peripherals.GPIO14).await;
-        let interfaces = wifi::setup_wifi(peripherals.WIFI, spawner);
+        let interfaces = wifi::setup_wifi(peripherals.WIFI, spawner)?;
         let network_stack = network::setup_network(network_seed, interfaces.ap, spawner);
 
         Timer::after(Duration::from_millis(1)).await;
