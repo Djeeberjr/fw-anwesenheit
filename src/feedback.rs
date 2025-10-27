@@ -1,6 +1,7 @@
 use embassy_time::{Duration, Timer};
 use esp_hal::gpio::{AnyPin, Output};
 use esp_hal::peripherals;
+use esp_hal::twai::TimingConfig;
 use esp_hal_smartled::SmartLedsAdapterAsync;
 use log::debug;
 use smart_leds::SmartLedsWriteAsync;
@@ -105,6 +106,8 @@ pub async fn feedback_task(
                 buzzer.set_high();
                 Timer::after(Duration::from_millis(100)).await;
                 buzzer.set_low();
+
+                Timer::after(Duration::from_secs(2)).await;
                 led.write(brightness(
                     [BLACK; init::hardware::NUM_LEDS].into_iter(),
                     LED_LEVEL,
