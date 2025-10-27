@@ -50,7 +50,6 @@ use crate::init::wifi;
  *************************************************/
 
 pub const NUM_LEDS: usize = 1;
-pub const LED_BUFFER_SIZE: usize = buffer_size_async(NUM_LEDS);
 
 static SD_DET: Mutex<RefCell<Option<Input>>> = Mutex::new(RefCell::new(None));
 
@@ -70,6 +69,8 @@ pub async fn hardware_init(
     Uart<'static, Async>,
     Stack<'static>,
     I2c<'static, Async>,
+    Rmt<'static, esp_hal::Async>,
+    GPIO1<'static>,
     GPIO21<'static>,
     GPIO0<'static>,
     SmartLedsAdapterAsync<'static, LED_BUFFER_SIZE>,
@@ -102,6 +103,10 @@ pub async fn hardware_init(
 
     let sd_det_gpio = peripherals.GPIO0;
 
+    let rmt: Rmt<'_, esp_hal::Async> = {let frequency: Rate = Rate::from_mhz(80);
+    Rmt::new(peripherals.RMT, frequency)}    .expect("Failed to initialize RMT")
+    .into_async();
+
     let spi_bus = setup_spi(
         peripherals.SPI2,
         peripherals.GPIO19,
@@ -117,6 +122,7 @@ pub async fn hardware_init(
 
     let vol_mgr = setup_sdcard(spi_bus, sd_cs_pin);
 
+    let led_gpio = peripherals.GPIO1;
     let buzzer_gpio = peripherals.GPIO21;
 
     let led = setup_led(peripherals.RMT, peripherals.GPIO1);
@@ -129,6 +135,8 @@ pub async fn hardware_init(
         uart_device,
         stack,
         i2c_device,
+        rmt,
+        led_gpio,
         buzzer_gpio,
         sd_det_gpio,
         led,

@@ -1,6 +1,9 @@
 use embassy_time::{Duration, Timer};
-use esp_hal::peripherals;
-use esp_hal_smartled::SmartLedsAdapterAsync;
+use esp_hal::peripherals::RMT;
+use esp_hal::rmt::Rmt;
+use esp_hal::time::Rate;
+use esp_hal::{peripherals, rmt};
+use esp_hal_smartled::{SmartLedsAdapterAsync, buffer_size_async};
 use log::debug;
 use smart_leds::SmartLedsWriteAsync;
 use smart_leds::colors::{BLACK, GREEN, RED, YELLOW};
@@ -25,11 +28,18 @@ const LED_LEVEL: u8 = 255;
 
 #[embassy_executor::task]
 pub async fn feedback_task(
-    mut led: SmartLedsAdapterAsync<'static, { hardware::LED_BUFFER_SIZE }>,
-    buzzer: peripherals::GPIO21<'static>,
+    rmt: Rmt<'static, esp_hal::Async>,
+    led_gpio: peripherals::GPIO1<'static>,
+    buzzer_gpio: peripherals::GPIO21<'static>,
 ) {
     debug!("Starting feedback task");
-    let mut buzzer = init::hardware::setup_buzzer(buzzer);
+
+    let rmt_channel = rmt.channel0;
+    let rmt_buffer = [esp_hal::rmt::PulseCode::default(); buffer_size_async(hardware::NUM_LEDS)];
+
+    let mut led = SmartLedsAdapterAsync::new(rmt_channel, led_gpio, rmt_buffer);
+
+    let mut buzzer = init::hardware::setup_buzzer(buzzer_gpio);
     loop {
         let feedback_state = FEEDBACK_STATE.wait().await;
         match feedback_state {

@@ -47,7 +47,7 @@ static CHAN: StaticCell<TallyChannel> = StaticCell::new();
 
 #[esp_rtos::main]
 async fn main(spawner: Spawner) -> ! {
-    let (uart_device, stack, i2c, buzzer_gpio, sd_det_gpio, led, persistence_layer) =
+    let (uart_device, stack, i2c, rmt, led_gpio, buzzer_gpio, sd_det_gpio, persistence_layer) =
         init::hardware::hardware_init(spawner).await;
 
     info!("Starting up...");
@@ -73,7 +73,7 @@ async fn main(spawner: Spawner) -> ! {
     ));
 
     debug!("spawing feedback task..");
-    spawner.must_spawn(feedback::feedback_task(led, buzzer_gpio));
+    spawner.must_spawn(feedback::feedback_task(rmt, led_gpio, buzzer_gpio));
 
     debug!("spawn sd detect task");
     spawner.must_spawn(sd_detect_task(sd_det_gpio));
