@@ -11,7 +11,7 @@ use esp_hal::peripherals::{
     GPIO0, GPIO1, GPIO16, GPIO17, GPIO18, GPIO19, GPIO20, GPIO21, GPIO22, GPIO23, I2C0, RMT, SPI2,
     UART1,
 };
-use esp_hal::rmt::{ConstChannelAccess, Rmt};
+use esp_hal::rmt::Rmt;
 use esp_hal::spi::master::{Config as Spi_config, Spi};
 use esp_hal::system::software_reset;
 use esp_hal::time::Rate;
@@ -50,7 +50,7 @@ use crate::init::wifi;
  *************************************************/
 
 pub const NUM_LEDS: usize = 1;
-pub const LED_BUFFER_SIZE: usize = NUM_LEDS * 25;
+pub const LED_BUFFER_SIZE: usize = buffer_size_async(NUM_LEDS);
 
 static SD_DET: Mutex<RefCell<Option<Input>>> = Mutex::new(RefCell::new(None));
 
@@ -65,32 +65,33 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
 esp_bootloader_esp_idf::esp_app_desc!();
 
 pub async fn hardware_init(
-    spawner: &mut Spawner,
+    spawner: Spawner,
 ) -> (
     Uart<'static, Async>,
     Stack<'static>,
     I2c<'static, Async>,
-    SmartLedsAdapterAsync<ConstChannelAccess<esp_hal::rmt::Tx, 0>, LED_BUFFER_SIZE>,
     GPIO21<'static>,
     GPIO0<'static>,
+    SmartLedsAdapterAsync<'static, LED_BUFFER_SIZE>,
     SDCardPersistence,
 ) {
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
 
-    esp_alloc::heap_allocator!(size: 72 * 1024);
+    esp_alloc::heap_allocator!(#[unsafe(link_section = ".dram2_uninit")] size: 65536);
 
-    let timer0 = SystemTimer::new(peripherals.SYSTIMER);
-    esp_hal_embassy::init(timer0.alarm0);
+    let timg0 = TimerGroup::new(peripherals.TIMG0);
+    let sw_interrupt =
+        esp_hal::interrupt::software::SoftwareInterruptControl::new(peripherals.SW_INTERRUPT);
+    esp_rtos::start(timg0.timer0, sw_interrupt.software_interrupt0);
 
     init_logger(log::LevelFilter::Debug);
 
-    let timer1 = TimerGroup::new(peripherals.TIMG0);
-    let mut rng = esp_hal::rng::Rng::new(peripherals.RNG);
+    let rng = esp_hal::rng::Rng::new();
     let network_seed = (rng.random() as u64) << 32 | rng.random() as u64;
 
     wifi::set_antenna_mode(peripherals.GPIO3, peripherals.GPIO14).await;
-    let interfaces = wifi::setup_wifi(timer1.timer0, rng, peripherals.WIFI, spawner);
+    let interfaces = wifi::setup_wifi(peripherals.WIFI, spawner);
     let stack = network::setup_network(network_seed, interfaces.ap, spawner);
 
     Timer::after(Duration::from_millis(1)).await;
@@ -118,9 +119,9 @@ pub async fn hardware_init(
 
     let buzzer_gpio = peripherals.GPIO21;
 
-    Timer::after(Duration::from_millis(500)).await;
-
     let led = setup_led(peripherals.RMT, peripherals.GPIO1);
+
+    Timer::after(Duration::from_millis(500)).await;
 
     debug!("hardware init done");
 
@@ -128,9 +129,9 @@ pub async fn hardware_init(
         uart_device,
         stack,
         i2c_device,
-        led,
         buzzer_gpio,
         sd_det_gpio,
+        led,
         vol_mgr,
     )
 }
@@ -189,11 +190,10 @@ pub fn setup_buzzer(buzzer_gpio: GPIO21<'static>) -> Output<'static> {
     buzzer
 }
 
-fn setup_led(
-    rmt: RMT<'static>,
-    led_gpio: GPIO1<'static>,
-) -> SmartLedsAdapterAsync<ConstChannelAccess<esp_hal::rmt::Tx, 0>, LED_BUFFER_SIZE> {
-    debug!("setup led");
+fn setup_led<'a>(
+    rmt: RMT<'a>,
+    led_gpio: GPIO1<'a>,
+) -> esp_hal_smartled::SmartLedsAdapterAsync<'a, LED_BUFFER_SIZE> {
     let rmt: Rmt<'_, esp_hal::Async> = {
         let frequency: Rate = Rate::from_mhz(80);
         Rmt::new(rmt, frequency)
@@ -202,10 +202,7 @@ fn setup_led(
     .into_async();
 
     let rmt_channel = rmt.channel0;
-    let rmt_buffer = [0_u32; buffer_size_async(NUM_LEDS)];
+    let rmt_buffer = [esp_hal::rmt::PulseCode::default(); LED_BUFFER_SIZE];
 
-    let led: SmartLedsAdapterAsync<_, LED_BUFFER_SIZE> =
-        SmartLedsAdapterAsync::new(rmt_channel, led_gpio, rmt_buffer);
-
-    led
+    SmartLedsAdapterAsync::new(rmt_channel, led_gpio, rmt_buffer)
 }

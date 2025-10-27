@@ -38,7 +38,7 @@ impl<State, CurrentPathParameters>
                 );
 
                 response_writer
-                    .write_response(request.body_connection.finalize().await.unwrap(), response)
+                    .write_response(request.body_connection.finalize().await?, response)
                     .await
             }
             None => {
@@ -68,10 +68,7 @@ impl Content for StaticAsset {
         self.0.len()
     }
 
-    async fn write_content<W: embedded_io_async::Write>(
-        self,
-        mut writer: W,
-    ) -> Result<(), W::Error> {
+    async fn write_content<W: edge_nal::io::Write>(self, mut writer: W) -> Result<(), W::Error> {
         writer.write_all(self.0).await
     }
 }

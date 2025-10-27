@@ -2,15 +2,15 @@ use core::{net::Ipv4Addr, str::FromStr};
 use embassy_executor::Spawner;
 use embassy_net::{Ipv4Cidr, Runner, Stack, StackResources, StaticConfigV4};
 use embassy_time::{Duration, Timer};
-use esp_wifi::wifi::WifiDevice;
+use esp_radio::wifi::WifiDevice;
 use static_cell::make_static;
 
 use crate::webserver::WEB_TAKS_SIZE;
 
 pub const NETWORK_STACK_SIZE: usize = WEB_TAKS_SIZE + 2; // + 2 for other network taks. Breaks
-                                                         // without
+// without
 
-pub fn setup_network<'a>(seed: u64, wifi: WifiDevice<'static>, spawner: &mut Spawner) -> Stack<'a> {
+pub fn setup_network<'a>(seed: u64, wifi: WifiDevice<'static>, spawner: Spawner) -> Stack<'a> {
     let gw_ip_addr_str = "192.168.2.1";
     let gw_ip_addr = Ipv4Addr::from_str(gw_ip_addr_str).expect("failed to parse gateway ip");
     let config = embassy_net::Config::ipv4_static(StaticConfigV4 {
@@ -19,12 +19,10 @@ pub fn setup_network<'a>(seed: u64, wifi: WifiDevice<'static>, spawner: &mut Spa
         dns_servers: Default::default(),
     });
 
-    let (stack, runner) = embassy_net::new(
-        wifi,
-        config,
-        make_static!(StackResources::<NETWORK_STACK_SIZE>::new()),
-        seed,
-    );
+    let nw_stack: &'static mut StackResources<NETWORK_STACK_SIZE> =
+        make_static!(StackResources::<NETWORK_STACK_SIZE>::new());
+
+    let (stack, runner) = embassy_net::new(wifi, config, nw_stack, seed);
 
     spawner.must_spawn(net_task(runner));
     spawner.must_spawn(run_dhcp(stack, gw_ip_addr_str));
