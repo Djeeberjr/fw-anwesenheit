@@ -1,6 +1,6 @@
 use chrono::{TimeZone, Utc};
 use ds3231::{
-    Config, DS3231, DS3231Error, InterruptControl, Oscillator, SquareWaveFrequency,
+    Config, DS3231, InterruptControl, Oscillator, SquareWaveFrequency,
     TimeRepresentation,
 };
 use esp_hal::{
@@ -14,10 +14,6 @@ use crate::{FEEDBACK_STATE, drivers, feedback};
 include!(concat!(env!("OUT_DIR"), "/build_time.rs"));
 
 const RTC_ADDRESS: u8 = 0x68;
-
-const SECS_PER_DAY: u64 = 86_400;
-const UNIX_OFFSET_DAYS: u64 = 719_163; // Days from 0000-03-01 to 1970-01-01
-const UTC_PLUS_ONE: u64 = 3600;
 
 pub struct RTCClock {
     dev: DS3231<I2c<'static, Async>>,
@@ -35,8 +31,7 @@ impl RTCClock {
     pub async fn get_time(&mut self) -> u64 {
         match self.dev.datetime().await {
             Ok(datetime) => {
-                let utc_time = datetime.and_utc().timestamp() as u64;
-                utc_time
+                datetime.and_utc().timestamp() as u64
             }
             Err(e) => {
                 FEEDBACK_STATE.signal(feedback::FeedbackState::Error);
@@ -45,33 +40,6 @@ impl RTCClock {
             }
         }
     }
-}
-
-fn unix_to_ymd_string(timestamp: u64) -> (u16, u8, u8) {
-    // Apply UTC+1 offset
-    let ts = timestamp + UTC_PLUS_ONE;
-
-    // Convert to total days since UNIX epoch
-    let days_since_epoch = ts / SECS_PER_DAY;
-
-    // Convert to proleptic Gregorian date
-    civil_from_days(days_since_epoch as i64 + UNIX_OFFSET_DAYS as i64)
-}
-
-// This function returns (year, month, day).
-// Based on the algorithm by Howard Hinnant.
-fn civil_from_days(z: i64) -> (u16, u8, u8) {
-    let mut z = z;
-    z -= 60; // shift epoch for algorithm
-    let era = (z >= 0).then_some(z).unwrap_or(z - 146096) / 146097;
-    let doe = z - era * 146097; // [0, 146096]
-    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365; // [0, 399]
-    let y = yoe + era * 400;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100); // [0, 365]
-    let mp = (5 * doy + 2) / 153; // [0, 11]
-    let d = doy - (153 * mp + 2) / 5 + 1; // [1, 31]
-    let m = mp + (if mp < 10 { 3 } else { -9 }); // [1, 12]
-    ((y + (m <= 2) as i64) as u16, m as u8, d as u8)
 }
 
 pub async fn rtc_config(i2c: I2c<'static, Async>) -> DS3231<I2c<'static, Async>> {
@@ -118,11 +86,4 @@ pub async fn rtc_config(i2c: I2c<'static, Async>) -> DS3231<I2c<'static, Async>>
     }
 
     rtc
-}
-
-pub async fn read_rtc_time<'a>(
-    rtc: &'a mut DS3231<I2c<'static, Async>>,
-) -> Result<u64, DS3231Error<esp_hal::i2c::master::Error>> {
-    let timestamp_result = rtc.datetime().await?;
-    Ok(timestamp_result.and_utc().timestamp() as u64)
 }
