@@ -18,9 +18,9 @@
     mapping = await fetchMapping();
 
     let sse = new EventSource("/api/idevent");
-    sse.onmessage = (e) => {
+    sse.addEventListener("msg", function (e) {
       lastID = e.data;
-    };
+    });
   });
 </script>
 
@@ -74,7 +74,7 @@
       }
       let csvFile = await generateCSVFile(from, to, mapping);
 
-      downloadBlob("export.csv",csvFile,"text/csv");
+      downloadBlob("export.csv", csvFile, "text/csv");
     }}
   />
 </main>
