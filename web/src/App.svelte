@@ -56,8 +56,11 @@
           addModal.open(id, firstName, lastName);
         }}
       />
+      <span>Gesammmte einträge: { Object.keys(mapping).length}</span>
     {/if}
   </div>
+
+
 
   <AddIDModal
     bind:this={addModal}
