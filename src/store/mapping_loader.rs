@@ -17,15 +17,15 @@ impl<T: Persistence> MappingLoader<T> {
         Self(persistence_layer)
     }
 
-    pub async fn get_mapping(&self, id: TallyID) -> Option<Name> {
+    pub async fn get_mapping(&self, id: TallyID) -> Result<Name, T::Error> {
         self.0.lock().await.load_mapping_for_id(id).await
     }
 
-    pub async fn set_mapping(&self, id: TallyID, name: Name) {
-        self.0.lock().await.save_mapping_for_id(id, name).await;
+    pub async fn set_mapping(&self, id: TallyID, name: Name) -> Result<(), T::Error> {
+        self.0.lock().await.save_mapping_for_id(id, name).await
     }
 
-    pub async fn list_mappings(&self) -> Vec<TallyID> {
+    pub async fn list_mappings(&self) -> Result<Vec<TallyID>,T::Error> {
         self.0.lock().await.list_mappings().await
     }
 }

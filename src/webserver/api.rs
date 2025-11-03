@@ -34,19 +34,34 @@ pub struct QueryMapping {
 }
 
 // GET /api/mappings
-pub async fn get_mappings(State(state): State<AppState>) -> impl IntoResponse {
+pub async fn get_mappings(
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, impl IntoResponse> {
     let loader = state.mapping_loader.lock().await;
-    response::Json(loader.list_mappings().await)
+
+    match loader.list_mappings().await {
+        Ok(ids) => Ok(response::Json(ids)),
+        Err(_) => Err((
+            response::StatusCode::INTERNAL_SERVER_ERROR,
+            "INTERNAL_SERVER_ERROR",
+        )),
+    }
 }
 
 // GET /api/mapping
 pub async fn get_mapping(
     State(state): State<AppState>,
     Query(QueryMapping { id }): Query<QueryMapping>,
-) -> impl IntoResponse {
+) -> Result<impl IntoResponse, impl IntoResponse> {
     let loader = state.mapping_loader.lock().await;
-    let mapping = loader.get_mapping(id).await;
-    response::Json(mapping)
+
+    match loader.get_mapping(id).await {
+        Ok(name) => Ok(response::Json(name)),
+        Err(_) => Err((
+            response::StatusCode::INTERNAL_SERVER_ERROR,
+            "INTERNAL_SERVER_ERROR",
+        )),
+    }
 }
 
 // POST /api/mapping
@@ -55,7 +70,13 @@ pub async fn add_mapping(
     Json(data): Json<NewMapping>,
 ) -> impl IntoResponse {
     let loader = state.mapping_loader.lock().await;
-    loader.set_mapping(data.id, data.name).await;
+    match loader.set_mapping(data.id, data.name).await {
+        Ok(_) => (response::StatusCode::CREATED, ""),
+        Err(_) => (
+            response::StatusCode::INTERNAL_SERVER_ERROR,
+            "INTERNAL_SERVER_ERROR",
+        ),
+    }
 }
 
 // SSE /api/idevent
@@ -84,9 +105,13 @@ pub async fn get_days(
 
     let mut store = state.store.lock().await;
 
-    let days = store.list_days_in_timespan(from_day, to_day).await;
-
-    response::Json(days)
+    match store.list_days_in_timespan(from_day, to_day).await {
+        Ok(days) => Ok(response::Json(days)),
+        Err(_) => Err((
+            response::StatusCode::INTERNAL_SERVER_ERROR,
+            "Internal server error",
+        )),
+    }
 }
 
 // GET /api/day
@@ -102,7 +127,10 @@ pub async fn get_day(
     let mut store = state.store.lock().await;
 
     match store.load_day(parsed_day).await {
-        Some(att_day) => Ok(response::Json(att_day)),
-        None => Err((response::StatusCode::NOT_FOUND, "Not found")),
+        Ok(att_day) => Ok(response::Json(att_day)),
+        Err(_) => Err((
+            response::StatusCode::INTERNAL_SERVER_ERROR,
+            "Internal server error",
+        )),
     }
 }

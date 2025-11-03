@@ -58,7 +58,7 @@ impl<T: Persistence> IDStore<T> {
         }
     }
 
-    async fn persist_day(&mut self) {
+    async fn persist_day(&mut self) -> Result<(), T::Error> {
         self.persistence_layer
             .lock()
             .await
@@ -88,21 +88,25 @@ impl<T: Persistence> IDStore<T> {
     }
 
     /// Load and return a AttendanceDay. Nothing more. Nothing less.
-    pub async fn load_day(&mut self, day: Day) -> Option<AttendanceDay> {
+    pub async fn load_day(&mut self, day: Day) -> Result<AttendanceDay, T::Error> {
         if day == self.current_day.date {
-            return Some(self.current_day.clone());
+            return Ok(self.current_day.clone());
         }
 
         self.persistence_layer.lock().await.load_day(day).await
     }
 
-    pub async fn list_days_in_timespan(&mut self, from: Day, to: Day) -> Vec<Day> {
-        let all_days = self.persistence_layer.lock().await.list_days().await;
+    pub async fn list_days_in_timespan(
+        &mut self,
+        from: Day,
+        to: Day,
+    ) -> Result<Vec<Day>, T::Error> {
+        let all_days = self.persistence_layer.lock().await.list_days().await?;
 
-        all_days
+        Ok(all_days
             .into_iter()
             .filter(|e| *e >= from)
             .filter(|e| *e <= to)
-            .collect()
+            .collect())
     }
 }
