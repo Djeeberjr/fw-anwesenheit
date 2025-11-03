@@ -1,3 +1,4 @@
+use alloc::string::String;
 use core::{fmt::Display, str::FromStr};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
@@ -102,7 +103,7 @@ impl<'de> Deserialize<'de> for TallyID {
     where
         D: Deserializer<'de>,
     {
-        let s = <&str>::deserialize(deserializer)?;
-        TallyID::from_str(s).map_err(|_| de::Error::custom("Failed to parse Tally ID"))
+        let s = <String>::deserialize(deserializer)?;
+        TallyID::from_str(&s).map_err(|_| de::Error::custom("Failed to parse Tally ID"))
     }
 }
