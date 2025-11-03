@@ -1,8 +1,10 @@
+use alloc::rc::Rc;
 use alloc::vec::Vec;
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::mutex::Mutex;
 use serde::Deserialize;
 use serde::Serialize;
 
-use super::IDMapping;
 use crate::store::day::Day;
 use crate::store::persistence::Persistence;
 use crate::store::tally_id::TallyID;
@@ -34,38 +36,34 @@ impl AttendanceDay {
 
 #[derive(Clone)]
 pub struct IDStore<T: Persistence> {
-    pub current_day: AttendanceDay,
-    pub mapping: IDMapping,
-    persistence_layer: T,
+    current_day: AttendanceDay,
+    persistence_layer: Rc<Mutex<CriticalSectionRawMutex, T>>,
 }
 
 impl<T: Persistence> IDStore<T> {
-    pub async fn new_from_storage(mut persistence_layer: T, current_date: Day) -> Self {
-        let mapping = match persistence_layer.load_mapping().await {
-            Some(map) => map,
-            None => IDMapping::new(),
-        };
-
+    pub async fn new_from_storage(
+        persistence_layer: Rc<Mutex<CriticalSectionRawMutex, T>>,
+        current_date: Day,
+    ) -> Self {
         let day = persistence_layer
+            .lock()
+            .await
             .load_day(current_date)
             .await
             .unwrap_or(AttendanceDay::new(current_date));
 
         Self {
             current_day: day,
-            mapping,
             persistence_layer,
         }
     }
 
     async fn persist_day(&mut self) {
         self.persistence_layer
+            .lock()
+            .await
             .save_day(self.current_day.date, &self.current_day)
             .await
-    }
-
-    pub async fn persist_mapping(&mut self) {
-        self.persistence_layer.save_mapping(&self.mapping).await
     }
 
     /// Add a new id for the current day
@@ -95,11 +93,11 @@ impl<T: Persistence> IDStore<T> {
             return Some(self.current_day.clone());
         }
 
-        self.persistence_layer.load_day(day).await
+        self.persistence_layer.lock().await.load_day(day).await
     }
 
     pub async fn list_days_in_timespan(&mut self, from: Day, to: Day) -> Vec<Day> {
-        let all_days = self.persistence_layer.list_days().await;
+        let all_days = self.persistence_layer.lock().await.list_days().await;
 
         all_days
             .into_iter()

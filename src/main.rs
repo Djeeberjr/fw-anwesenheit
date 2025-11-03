@@ -2,7 +2,6 @@
 #![no_main]
 #![feature(type_alias_impl_trait)]
 #![feature(impl_trait_in_assoc_type)]
-#![warn(clippy::unwrap_used)]
 
 use alloc::rc::Rc;
 use embassy_executor::Spawner;
@@ -26,7 +25,7 @@ extern crate alloc;
 
 use crate::{
     init::{hardware::AppHardware, sd_card::SDCardPersistence},
-    store::{IDStore, day::Day, tally_id::TallyID},
+    store::{IDStore, day::Day, mapping_loader::MappingLoader, tally_id::TallyID},
     webserver::start_webserver,
 };
 
@@ -54,8 +53,14 @@ async fn main(spawner: Spawner) -> ! {
     let mut rtc = drivers::rtc::RTCClock::new(app_hardware.i2c).await;
 
     let current_day: Day = rtc.get_time().await.into();
-    let store: UsedStore = IDStore::new_from_storage(app_hardware.sdcard, current_day).await;
+
+    let shared_sdcard: Rc<Mutex<CriticalSectionRawMutex, SDCardPersistence>> =
+        Rc::new(Mutex::new(app_hardware.sdcard));
+
+    let store: UsedStore = IDStore::new_from_storage(shared_sdcard.clone(), current_day).await;
     let shared_store = Rc::new(Mutex::new(store));
+
+    let mapping_loader = MappingLoader::new(shared_sdcard.clone());
 
     let chan: &'static mut TallyChannel = CHAN.init(PubSubChannel::new());
     let publisher: TallyPublisher = chan.publisher().unwrap();
@@ -68,6 +73,7 @@ async fn main(spawner: Spawner) -> ! {
         app_hardware.network_stack,
         shared_store.clone(),
         chan,
+        mapping_loader,
     );
 
     /****************************** Spawning tasks ***********************************/

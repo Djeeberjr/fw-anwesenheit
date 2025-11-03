@@ -6,7 +6,7 @@ use picoserve::{
 use serde::Deserialize;
 
 use crate::{
-    store::{Name, day::Day, tally_id::TallyID},
+    store::{day::Day, mapping_loader::Name, tally_id::TallyID},
     webserver::{app::AppState, sse::IDEvents},
 };
 
@@ -28,10 +28,25 @@ pub struct QueryDay {
     day: Option<u32>,
 }
 
+#[derive(Deserialize)]
+pub struct QueryMapping {
+    id: TallyID,
+}
+
+// GET /api/mappings
+pub async fn get_mappings(State(state): State<AppState>) -> impl IntoResponse {
+    let loader = state.mapping_loader.lock().await;
+    response::Json(loader.list_mappings().await)
+}
+
 // GET /api/mapping
-pub async fn get_mapping(State(state): State<AppState>) -> impl IntoResponse {
-    let store = state.store.lock().await;
-    response::Json(store.mapping.clone())
+pub async fn get_mapping(
+    State(state): State<AppState>,
+    Query(QueryMapping { id }): Query<QueryMapping>,
+) -> impl IntoResponse {
+    let loader = state.mapping_loader.lock().await;
+    let mapping = loader.get_mapping(id).await;
+    response::Json(mapping)
 }
 
 // POST /api/mapping
@@ -39,9 +54,8 @@ pub async fn add_mapping(
     State(state): State<AppState>,
     Json(data): Json<NewMapping>,
 ) -> impl IntoResponse {
-    let mut store = state.store.lock().await;
-    store.mapping.add_mapping(data.id, data.name);
-    store.persist_mapping().await;
+    let loader = state.mapping_loader.lock().await;
+    loader.set_mapping(data.id, data.name).await;
 }
 
 // SSE /api/idevent

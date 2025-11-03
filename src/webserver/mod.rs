@@ -8,6 +8,8 @@ use static_cell::make_static;
 
 use crate::{
     TallyChannel, UsedStore,
+    init::sd_card::SDCardPersistence,
+    store::mapping_loader::{self, MappingLoader},
     webserver::app::{AppProps, AppState},
 };
 
@@ -23,10 +25,16 @@ pub fn start_webserver(
     stack: Stack<'static>,
     store: Rc<Mutex<CriticalSectionRawMutex, UsedStore>>,
     chan: &'static TallyChannel,
+    mapping_loader: MappingLoader<SDCardPersistence>,
 ) {
     let app = make_static!(AppProps.build_app());
 
-    let state = make_static!(AppState { store, chan });
+    let shared_mapping_loader = Rc::new(Mutex::new(mapping_loader));
+    let state = make_static!(AppState {
+        store,
+        chan,
+        mapping_loader: shared_mapping_loader
+    });
 
     let config = make_static!(picoserve::Config::new(picoserve::Timeouts {
         start_read_request: Some(Duration::from_secs(5)),

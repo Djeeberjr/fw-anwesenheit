@@ -7,21 +7,29 @@ export interface Name {
   last: string,
 }
 
-function stupidSerdeFix(pairs: [string, Name][]): IDMap {
-  const map: IDMap = {};
-  for (const [key, value] of pairs) {
-    map[key] = value;
-  }
+async function fetchIDList(): Promise<string[]> {
+  let res = await fetch("/api/mappings");
+  let data = await res.json();
+  return data;
+}
 
-  return map;
+async function fetchID(id: string): Promise<Name> {
+  let res = await fetch("/api/mapping?id=" + id);
+  let data = await res.json();
+  return data;
 }
 
 export async function fetchMapping(): Promise<IDMap> {
-  let res = await fetch("/api/mapping");
+  let ids = await fetchIDList();
 
-  let data = await res.json();
+  let map: IDMap = {};
 
-  return stupidSerdeFix(data);
+  for (const id of ids) {
+    let id_name = await fetchID(id);
+    map[id] = id_name;
+  }
+
+  return map;
 }
 
 export async function addMapping(id: string, firstName: string, lastName: string) {
