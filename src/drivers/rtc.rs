@@ -52,7 +52,7 @@ pub async fn rtc_config(i2c: I2c<'static, Async>) -> DS3231<I2c<'static, Async>>
         square_wave_frequency: SquareWaveFrequency::Hz1,
         interrupt_control: InterruptControl::Interrupt, // Enable interrupt mode
         battery_backed_square_wave: false,
-        oscillator_enable: Oscillator::Disabled,
+        oscillator_enable: Oscillator::Enabled,
     };
 
     match rtc.configure(&rtc_config).await {
@@ -83,5 +83,8 @@ pub async fn rtc_config(i2c: I2c<'static, Async>) -> DS3231<I2c<'static, Async>>
         }
         Err(e) => info!("Failed to read status: {:?}", e),
     }
+
+    info!("RTC time is: {:?}", rtc.datetime().await.unwrap());
+
     rtc
 }
