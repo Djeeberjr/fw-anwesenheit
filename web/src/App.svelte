@@ -5,7 +5,12 @@
   import AddIDModal from "./lib/AddIDModal.svelte";
   import ExportModal from "./lib/ExportModal.svelte";
   import { generateCSVFile } from "./lib/exporting";
-  import { fetchMapping, type IDMap } from "./lib/IDMapping";
+  import {
+    cacheMappingInLocalstore,
+    fetchMapping,
+    loadCachedMappingFromLocalstore,
+    type IDMap,
+  } from "./lib/IDMapping";
   import { downloadBlob } from "./lib/downloadBlob";
 
   let lastID: string = $state("");
@@ -15,7 +20,11 @@
   let exportModal: ExportModal;
 
   onMount(async () => {
-    mapping = await fetchMapping();
+    mapping = loadCachedMappingFromLocalstore();
+
+    let fetchedMapping = await fetchMapping();
+    mapping = fetchedMapping;
+    cacheMappingInLocalstore(fetchedMapping);
 
     let sse = new EventSource("/api/idevent");
     sse.addEventListener("msg", function (e) {
