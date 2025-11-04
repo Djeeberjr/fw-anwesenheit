@@ -1,7 +1,11 @@
 <script lang="ts">
   import Modal from "./Modal.svelte";
 
-  let { onSubmitted }: { onSubmitted?: () => void } = $props();
+  let {
+    onSubmitted,
+  }: {
+    onSubmitted?: (id: string, firstName: string, lastName: string) => void;
+  } = $props();
 
   let displayID = $state("");
   let firstName = $state("");
@@ -9,7 +13,11 @@
 
   let modal: Modal;
 
-  export function open(presetID: string, presetFirstName?: string, presetLastName?: string) {
+  export function open(
+    presetID: string,
+    presetFirstName?: string,
+    presetLastName?: string,
+  ) {
     displayID = presetID;
 
     firstName = presetFirstName ?? "";
@@ -33,13 +41,14 @@
         "Content-Type": "application/json",
       },
       body: JSON.stringify(data),
-    }).then(() => {
-      onSubmitted?.();
+    }).then((res) => {
+      if (res.status == 201) {
+        onSubmitted?.(displayID, firstName, lastName);
+      }
+      firstName = "";
+      lastName = "";
+      displayID = "";
     });
-
-    firstName = "";
-    lastName = "";
-    displayID = "";
   }
 </script>
 

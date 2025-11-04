@@ -56,16 +56,23 @@
           addModal.open(id, firstName, lastName);
         }}
       />
-      <span>Gesammmte einträge: { Object.keys(mapping).length}</span>
+      <span>Gesammmte einträge: {Object.keys(mapping).length}</span>
+    {:else}
+      Lade ...
     {/if}
   </div>
 
-
-
   <AddIDModal
     bind:this={addModal}
-    onSubmitted={async () => {
-      mapping = await fetchMapping();
+    onSubmitted={async (id, firstName, lastname) => {
+      if (mapping == null) {
+        return;
+      }
+
+      mapping[id] = {
+        first: firstName,
+        last: lastname,
+      };
     }}
   />
 
