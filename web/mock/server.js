@@ -20,8 +20,19 @@ function generateRandomId() {
 }
 
 // GET /api/mapping
+app.get("/api/mappings", (req, res) => {
+  res.json(Object.keys(mockData.mapping));
+});
+
 app.get("/api/mapping", (req, res) => {
-  res.json(mockData.mapping);
+  const id = req.query["id"]
+  const mapping = mockData.mapping[id];
+
+  if (mapping) {
+    res.json(mapping);
+  } else {
+    res.status(404).send();
+  }
 });
 
 // POST /api/mapping
@@ -49,10 +60,10 @@ app.get("/api/day", (req, res) => {
 
   if (req.query.day) {
     day = parseInt(req.query.day, 10);
-  }else if (req.query.timestamp) {
+  } else if (req.query.timestamp) {
     let ts = parseInt(req.query.timestamp, 10);
     day = ts / SECS_IN_DAY;
-  }else {
+  } else {
     return res.status(400).json({ error: "Missing or invalid 'day' parameter" });
   }
 
@@ -69,7 +80,7 @@ app.get("/api/day", (req, res) => {
   res.status(200).json(foundDay);
 });
 
-app.get("/api/days", (req,res) => {
+app.get("/api/days", (req, res) => {
 
   let qFrom = parseInt(req.query.from) / SECS_IN_DAY;
   let qTo = parseInt(req.query.to) / SECS_IN_DAY;
@@ -91,7 +102,7 @@ app.get("/api/idevent", (req, res) => {
   // Send initial event
   const sendEvent = () => {
     const id = generateRandomId();
-    res.write(`data: ${id}\n\n`);
+    res.write(`event: msg\ndata: ${id}\n\n`);
   };
 
   // Send immediately and then every 10 seconds
