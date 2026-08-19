@@ -116,6 +116,12 @@ app.get("/api/idevent", (req, res) => {
   });
 });
 
+// GET /api/time
+app.get("/api/time", (req, res) => {
+  const now = Date.now()
+  res.send((now / 1000).toString())
+});
+
 // Start the server
 app.listen(port, () => {
   console.log(`Mock API server running at http://localhost:${port}`);

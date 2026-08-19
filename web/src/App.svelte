@@ -12,12 +12,14 @@
     type IDMap,
   } from "./lib/IDMapping";
   import { downloadBlob } from "./lib/downloadBlob";
+  import TimeSync from "./lib/TimeSync.svelte";
 
   let lastID: string = $state("");
   let mapping: IDMap | null = $state(null);
 
   let addModal: AddIDModal;
   let exportModal: ExportModal;
+  let showMaintain = $state(false);
 
   onMount(async () => {
     mapping = loadCachedMappingFromLocalstore();
@@ -68,6 +70,21 @@
       <span>Gesammmte einträge: {Object.keys(mapping).length}</span>
     {:else}
       Lade ...
+    {/if}
+  </div>
+  <div class="w-118 pt-3">
+    <button onclick={() => (showMaintain = !showMaintain)}>
+      <div class="flex justify-start">
+        <span class="m-auto mr-1"
+          >{#if showMaintain}▼{:else}▶{/if}</span
+        >
+        <h1 class="text-center text-3xl sm:text-4xl font-bold text-gray-800">
+          Wartung
+        </h1>
+      </div>
+    </button>
+    {#if showMaintain}
+      <TimeSync />
     {/if}
   </div>
 
