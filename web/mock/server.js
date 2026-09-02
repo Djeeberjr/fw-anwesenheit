@@ -8,7 +8,9 @@ const port = 3000;
 
 const SECS_IN_DAY = 86_400;
 
-app.use(bodyParser.json());
+app.use(bodyParser.json({
+  strict: false
+}));
 
 function generateRandomId() {
   const chars = "ABCDEF0123456789";
@@ -121,6 +123,11 @@ app.get("/api/time", (req, res) => {
   const now = Date.now()
   res.send((now / 1000).toString())
 });
+
+app.post("/api/time", (req, res) => {
+  console.log(`Set time to ${req.body}`)
+  res.status(204);
+})
 
 // Start the server
 app.listen(port, () => {
