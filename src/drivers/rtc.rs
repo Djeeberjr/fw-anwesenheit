@@ -37,6 +37,20 @@ impl RTCClock {
             }
         }
     }
+
+    pub async fn set_time(&mut self, time: u64) {
+        let naive_dt = Utc
+            .timestamp_opt(time as i64, 0)
+            .single()
+            .expect("create native datetime")
+            .naive_utc();
+
+        self.dev
+            .set_datetime(&naive_dt)
+            .await
+            .expect("Set datetime");
+        info!("Set rtc to {:?}", naive_dt)
+    }
 }
 
 pub async fn rtc_config(i2c: I2c<'static, Async>) -> DS3231<I2c<'static, Async>> {
