@@ -19,6 +19,22 @@
     diff = clientTime.getTime() - serverTime.getTime();
   });
 
+  async function syncTime() {
+    let timestamp = Date.now();
+
+    let res = await fetch("/api/time", {
+      method: "POST",
+      headers: {
+        "Content-type": "application/json; charset=UTF-8",
+      },
+      body: JSON.stringify(timestamp),
+    });
+
+    if (res.status != 200) {
+      console.error(res);
+    }
+  }
+
   function formatDiff(ms: number) {
     if (ms === null) return "--";
     const sign = ms >= 0 ? "+" : "-";
@@ -67,7 +83,9 @@
     </div>
     <button
       class="px-6 py-3 text-lg font-semibold text-white bg-indigo-600 rounded-2xl shadow-md hover:bg-indigo-700 transition"
-      >Sync now!</button
+      onclick={() => {
+        syncTime();
+      }}>Sync now!</button
     >
   </div>
 {:else}
