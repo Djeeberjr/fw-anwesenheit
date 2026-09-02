@@ -19,7 +19,7 @@ impl response::sse::EventSource for IDEvents {
                 embassy_futures::select::Either::First(msg) => match msg {
                     embassy_sync::pubsub::WaitResult::Message(id) => {
                         let id_str: heapless::String<12> = id.into();
-                        writer.write_event("msg", id_str.as_str()).await?
+                        writer.write_event("data", id_str.as_str()).await?
                     }
                     embassy_sync::pubsub::WaitResult::Lagged(_) => {
                         warn!("SSE subscriber got lagged");

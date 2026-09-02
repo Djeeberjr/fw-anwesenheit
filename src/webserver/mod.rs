@@ -7,10 +7,7 @@ use picoserve::{AppRouter, AppWithStateBuilder};
 use static_cell::make_static;
 
 use crate::{
-    TallyChannel, UsedStore,
-    init::sd_card::SDCardPersistence,
-    store::mapping_loader::{self, MappingLoader},
-    webserver::app::{AppProps, AppState},
+    TallyChannel, UsedStore, drivers::rtc::RTCClock, init::sd_card::SDCardPersistence, store::mapping_loader::{self, MappingLoader}, webserver::app::{AppProps, AppState}
 };
 
 mod api;
@@ -26,6 +23,7 @@ pub fn start_webserver(
     store: Rc<Mutex<CriticalSectionRawMutex, UsedStore>>,
     chan: &'static TallyChannel,
     mapping_loader: MappingLoader<SDCardPersistence>,
+    rtc: Rc<Mutex<CriticalSectionRawMutex, RTCClock>>,
 ) {
     let app = make_static!(AppProps.build_app());
 
@@ -33,7 +31,8 @@ pub fn start_webserver(
     let state = make_static!(AppState {
         store,
         chan,
-        mapping_loader: shared_mapping_loader
+        mapping_loader: shared_mapping_loader,
+        rtc
     });
 
     let config = make_static!(picoserve::Config::new(picoserve::Timeouts {

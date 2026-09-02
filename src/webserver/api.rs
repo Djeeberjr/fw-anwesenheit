@@ -134,3 +134,15 @@ pub async fn get_day(
         )),
     }
 }
+
+// GET /api/time
+pub async fn get_time(State(state): State<AppState>) -> impl IntoResponse {
+    let time = state.rtc.lock().await.get_time().await;
+    response::Json(time)
+}
+
+// POST /api/time
+pub async fn set_time(State(state): State<AppState>, Json(data): Json<u64>) -> impl IntoResponse {
+    state.rtc.lock().await.set_time(data).await;
+    response::StatusCode::NO_CONTENT
+}

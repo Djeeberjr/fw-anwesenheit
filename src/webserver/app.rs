@@ -4,10 +4,14 @@ use picoserve::{AppWithStateBuilder, routing::get};
 
 use crate::{
     TallyChannel, UsedStore,
+    drivers::rtc::RTCClock,
     init::sd_card::SDCardPersistence,
     store::mapping_loader::MappingLoader,
     webserver::{
-        api::{add_mapping, get_day, get_days, get_idevent, get_mapping, get_mappings},
+        api::{
+            add_mapping, get_day, get_days, get_idevent, get_mapping, get_mappings, get_time,
+            set_time,
+        },
         assets::Assets,
     },
 };
@@ -17,6 +21,7 @@ pub struct AppState {
     pub store: Rc<Mutex<CriticalSectionRawMutex, UsedStore>>,
     pub chan: &'static TallyChannel,
     pub mapping_loader: Rc<Mutex<CriticalSectionRawMutex, MappingLoader<SDCardPersistence>>>,
+    pub rtc: Rc<Mutex<CriticalSectionRawMutex, RTCClock>>,
 }
 
 pub struct AppProps;
@@ -32,5 +37,6 @@ impl AppWithStateBuilder for AppProps {
             .route("/api/idevent", get(get_idevent))
             .route("/api/days", get(get_days))
             .route("/api/day", get(get_day))
+            .route("/api/time", get(get_time).post(set_time))
     }
 }

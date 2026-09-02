@@ -25,6 +25,7 @@ use static_cell::StaticCell;
 extern crate alloc;
 
 use crate::{
+    drivers::rtc::RTCClock,
     init::{hardware::AppHardware, sd_card::SDCardPersistence},
     store::{IDStore, day::Day, mapping_loader::MappingLoader, tally_id::TallyID},
     webserver::start_webserver,
@@ -51,9 +52,11 @@ async fn main(spawner: Spawner) -> ! {
 
     info!("Starting up...");
 
-    let mut rtc = drivers::rtc::RTCClock::new(app_hardware.i2c).await;
+    let rtc: Rc<Mutex<CriticalSectionRawMutex, RTCClock>> = Rc::new(Mutex::new(
+        drivers::rtc::RTCClock::new(app_hardware.i2c).await,
+    ));
 
-    let current_day: Day = rtc.get_time().await.into();
+    let current_day: Day = rtc.lock().await.get_time().await.into();
 
     let shared_sdcard: Rc<Mutex<CriticalSectionRawMutex, SDCardPersistence>> =
         Rc::new(Mutex::new(app_hardware.sdcard));
@@ -75,6 +78,7 @@ async fn main(spawner: Spawner) -> ! {
         shared_store.clone(),
         chan,
         mapping_loader,
+        rtc.clone()
     );
 
     /****************************** Spawning tasks ***********************************/
@@ -104,7 +108,7 @@ async fn main(spawner: Spawner) -> ! {
             Message(msg) => {
                 debug!("Got message: {msg:?}");
 
-                let day: Day = rtc.get_time().await.into();
+                let day: Day = rtc.lock().await.get_time().await.into();
                 let added = shared_store.lock().await.add_id(msg, day).await;
 
                 if added {
