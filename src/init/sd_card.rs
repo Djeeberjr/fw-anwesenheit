@@ -172,6 +172,17 @@ impl Persistence for SDCardPersistence {
         Ok(())
     }
 
+    async fn remove_day(&mut self, day: Day) -> Result<(), Self::Error> {
+        let mut vol_0 = self.vol_mgr.open_volume(VolumeIdx(0))?;
+        let mut root_dir = vol_0.open_root_dir()?;
+
+        let filename = Self::generate_filename_for_day(day)?;
+
+        root_dir.delete_file_in_dir(filename)?;
+
+        Ok(())
+    }
+
     async fn list_days(&mut self) -> Result<Vec<Day>, Self::Error> {
         let mut vol_0 = self.vol_mgr.open_volume(VolumeIdx(0))?;
         let mut root_dir = vol_0.open_root_dir()?;
