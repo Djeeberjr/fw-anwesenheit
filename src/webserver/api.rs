@@ -135,6 +135,27 @@ pub async fn get_day(
     }
 }
 
+// DELETE /dai/day
+pub async fn delete_day(
+    State(state): State<AppState>,
+    Query(QueryDay { timestamp, day }): Query<QueryDay>,
+) -> Result<impl IntoResponse, impl IntoResponse> {
+    let parsed_day = timestamp
+        .map(Day::new_from_timestamp)
+        .or_else(|| day.map(Day::new))
+        .ok_or((response::StatusCode::NOT_FOUND, "Not found"))?;
+
+    let mut store = state.store.lock().await;
+
+    match store.remove_day(parsed_day).await {
+        Ok(att_day) => Ok(response::Json(att_day)),
+        Err(_) => Err((
+            response::StatusCode::INTERNAL_SERVER_ERROR,
+            "Internal server error",
+        )),
+    }
+}
+
 // GET /api/time
 pub async fn get_time(State(state): State<AppState>) -> impl IntoResponse {
     let time = state.rtc.lock().await.get_time().await;

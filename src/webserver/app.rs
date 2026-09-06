@@ -9,8 +9,8 @@ use crate::{
     store::mapping_loader::MappingLoader,
     webserver::{
         api::{
-            add_mapping, get_day, get_days, get_idevent, get_mapping, get_mappings, get_time,
-            set_time,
+            add_mapping, delete_day, get_day, get_days, get_idevent, get_mapping, get_mappings,
+            get_time, set_time,
         },
         assets::Assets,
     },
@@ -36,7 +36,7 @@ impl AppWithStateBuilder for AppProps {
             .route("/api/mappings", get(get_mappings))
             .route("/api/idevent", get(get_idevent))
             .route("/api/days", get(get_days))
-            .route("/api/day", get(get_day))
+            .route("/api/day", get(get_day).delete(delete_day))
             .route("/api/time", get(get_time).post(set_time))
     }
 }
