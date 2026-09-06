@@ -109,4 +109,8 @@ impl<T: Persistence> IDStore<T> {
             .filter(|e| *e <= to)
             .collect())
     }
+
+    pub async fn remove_day(&mut self, day: Day) -> Result<(), T::Error> {
+        self.persistence_layer.lock().await.remove_day(day).await
+    }
 }
