@@ -21,6 +21,25 @@ function generateRandomId() {
   return id;
 }
 
+function parseDay(req) {
+  let day;
+
+  if (req.query.day) {
+    day = parseInt(req.query.day, 10);
+  } else if (req.query.timestamp) {
+    let ts = parseInt(req.query.timestamp, 10);
+    day = ts / SECS_IN_DAY;
+  } else {
+    throw Error("Missing or invalid 'day' parameter")
+  }
+
+  if (isNaN(day)) {
+    throw Error("Missing or invalid 'day' parameter")
+  }
+
+  return day;
+}
+
 // GET /api/mapping
 app.get("/api/mappings", (req, res) => {
   res.json(Object.keys(mockData.mapping));
@@ -58,19 +77,11 @@ app.post("/api/mapping", (req, res) => {
 });
 
 app.get("/api/day", (req, res) => {
-  let day;
-
-  if (req.query.day) {
-    day = parseInt(req.query.day, 10);
-  } else if (req.query.timestamp) {
-    let ts = parseInt(req.query.timestamp, 10);
-    day = ts / SECS_IN_DAY;
-  } else {
-    return res.status(400).json({ error: "Missing or invalid 'day' parameter" });
-  }
-
-  if (isNaN(day)) {
-    return res.status(400).json({ error: "Missing or invalid 'day' parameter" });
+  let day
+  try {
+    day = parseDay(req);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
   }
 
   let foundDay = mockData.days.find(e => e.date == day);
@@ -80,6 +91,23 @@ app.get("/api/day", (req, res) => {
   }
 
   res.status(200).json(foundDay);
+});
+
+app.delete("/api/day", (req, res) => {
+  let day
+  try {
+    day = parseDay(req);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+
+  let dayIdx = mockData.days.findIndex(e => e.date == day);
+  if (dayIdx < 0) {
+    res.status(404).json({ error: "Day not found" })
+  }
+
+  mockData.days.splice(dayIdx, 1)
+  res.status(200);
 });
 
 app.get("/api/days", (req, res) => {
@@ -124,10 +152,12 @@ app.get("/api/time", (req, res) => {
   res.send((now / 1000).toString())
 });
 
+// POST /api/time
 app.post("/api/time", (req, res) => {
   console.log(`Set time to ${req.body}`)
   res.status(204);
 })
+
 
 // Start the server
 app.listen(port, () => {
