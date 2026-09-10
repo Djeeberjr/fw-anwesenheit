@@ -107,7 +107,9 @@ app.delete("/api/day", (req, res) => {
   }
 
   mockData.days.splice(dayIdx, 1)
-  res.status(200);
+
+  console.log("Deleted day: " + day)
+  res.status(200).send();
 });
 
 app.get("/api/days", (req, res) => {
