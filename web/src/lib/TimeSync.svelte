@@ -30,7 +30,7 @@
       body: JSON.stringify(timestamp),
     });
 
-    if (res.status != 200) {
+    if (res.status >= 400) {
       console.error(res);
     }
   }
@@ -81,12 +81,15 @@
           : "text-green-600"}>{formatDiff(diff)}</span
       >
     </div>
-    <button
-      class="px-6 py-3 text-lg font-semibold text-white bg-indigo-600 rounded-2xl shadow-md hover:bg-indigo-700 transition"
-      onclick={() => {
-        syncTime();
-      }}>Sync now!</button
-    >
+
+    <div class="flex justify-center">
+      <button
+        class="default-btn"
+        onclick={() => {
+          syncTime();
+        }}>Sync now!</button
+      >
+    </div>
   </div>
 {:else}
   Lade ...

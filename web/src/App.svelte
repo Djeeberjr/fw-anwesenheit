@@ -44,7 +44,7 @@
   </div>
 
   <button
-    class="px-6 py-3 text-lg font-semibold text-white bg-indigo-600 rounded-2xl shadow-md hover:bg-indigo-700 transition"
+    class="default-btn"
     onclick={() => {
       exportModal.open();
     }}

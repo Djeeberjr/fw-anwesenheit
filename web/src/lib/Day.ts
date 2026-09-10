@@ -29,3 +29,8 @@ export async function fetchDays(from: Date, to: Date): Promise<Day[]> {
   return json;
 }
 
+export async function removeDay(day: Day) {
+  return fetch("/api/day?" + (new URLSearchParams({ day: day.toString() }).toString()), {
+    method: "DELETE",
+  })
+}

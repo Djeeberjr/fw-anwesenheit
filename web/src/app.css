@@ -1,2 +1,5 @@
 @import "tailwindcss";
 
+.default-btn {
+  @apply px-6 py-3 text-lg font-semibold text-white bg-indigo-600 rounded-2xl shadow-md hover:bg-indigo-700 transition disabled:bg-gray-600 disabled:hover:bg-gray-700
+}
