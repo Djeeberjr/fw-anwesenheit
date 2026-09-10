@@ -14,6 +14,7 @@
   import { downloadBlob } from "./lib/downloadBlob";
   import TimeSync from "./lib/TimeSync.svelte";
   import Cleanup from "./lib/Cleanup.svelte";
+  import Console from "./lib/Console.svelte";
 
   let lastID: string = $state("");
   let mapping: IDMap | null = $state(null);
@@ -87,6 +88,7 @@
     {#if showMaintain}
       <TimeSync />
       <Cleanup />
+      <Console />
     {/if}
   </div>
 
