@@ -74,9 +74,9 @@
     </div>
   </form>
   {#if daysToRemove != undefined}
-    <table class="px-10">
+    <table class="px-10 w-full">
       <thead>
-        <tr>
+        <tr class="text-left">
           <th>Datum</th>
           <th>Anwesende</th>
         </tr>
@@ -84,7 +84,7 @@
 
       <tbody>
         {#each daysToRemove as day}
-          <tr class="whitespace-nowrap pr-5 pl-2 py-1">
+          <tr>
             <td>
               {dayToDate(day.day).toLocaleDateString()}
             </td>
