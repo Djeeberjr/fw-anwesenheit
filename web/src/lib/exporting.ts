@@ -1,5 +1,6 @@
+import { fetchDay, fetchDays } from "./api";
 import { generateCSVString } from "./csv";
-import { dayToDate, fetchDay, fetchDays, type AttendanceDay, type Day } from "./Day";
+import { dayToDate, type AttendanceDay, type Day } from "./Day";
 import type { IDMap } from "./IDMapping";
 
 interface CSVRow {

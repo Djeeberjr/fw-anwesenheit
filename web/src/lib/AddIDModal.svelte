@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { addMapping } from "./api";
   import Modal from "./Modal.svelte";
 
   let {
@@ -26,29 +27,14 @@
     modal.open();
   }
 
-  function onsubmit() {
-    let data = {
-      id: displayID,
-      name: {
-        first: firstName,
-        last: lastName,
-      },
-    };
+  async function onsubmit() {
+    await addMapping(firstName, lastName, displayID);
 
-    fetch("/api/mapping", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    }).then((res) => {
-      if (res.status == 201) {
-        onSubmitted?.(displayID, firstName, lastName);
-      }
-      firstName = "";
-      lastName = "";
-      displayID = "";
-    });
+    onSubmitted?.(displayID, firstName, lastName);
+
+    firstName = "";
+    lastName = "";
+    displayID = "";
   }
 </script>
 

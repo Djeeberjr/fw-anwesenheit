@@ -1,4 +1,5 @@
-import { dayToDate, fetchDay, fetchDays, type Day } from "./Day";
+import { fetchDay, fetchDays } from "./api";
+import { type Day } from "./Day";
 
 export interface DayToBeRemoved {
   day: Day,

@@ -1,6 +1,7 @@
 <script lang="ts">
+  import { removeDay } from "./api";
   import { cleanupPrepare, type DayToBeRemoved } from "./cleanup";
-  import { dayToDate, removeDay } from "./Day";
+  import { dayToDate } from "./Day";
 
   let fromDate: string | undefined = $state();
   let toDate: string | undefined = $state();
@@ -37,10 +38,7 @@
     }
 
     for (const day of daysToRemove) {
-      let res = await removeDay(day.day);
-      if (res.status >= 400) {
-        console.error(res);
-      }
+      await removeDay(day.day);
     }
 
     daysToRemove = undefined;

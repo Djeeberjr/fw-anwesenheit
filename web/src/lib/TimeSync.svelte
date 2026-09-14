@@ -1,38 +1,20 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { getRTCTime, setRTCTime } from "./api";
 
   let serverTime: Date | null = null;
   let clientTime: Date | null = null;
   let diff = 0;
 
   onMount(async () => {
-    let res = await fetch("/api/time");
-    if (!res.ok) {
-      console.error("Failed to get time from server: ", res);
-      return;
-    }
-
-    let timestamp = parseInt(await res.text());
     clientTime = new Date();
-    serverTime = new Date(timestamp * 1000);
+    serverTime = await getRTCTime();
 
     diff = clientTime.getTime() - serverTime.getTime();
   });
 
   async function syncTime() {
-    let timestamp = Date.now();
-
-    let res = await fetch("/api/time", {
-      method: "POST",
-      headers: {
-        "Content-type": "application/json; charset=UTF-8",
-      },
-      body: JSON.stringify(timestamp),
-    });
-
-    if (res.status >= 400) {
-      console.error(res);
-    }
+    await setRTCTime(new Date());
   }
 
   function formatDiff(ms: number) {
