@@ -128,7 +128,7 @@ export async function setRTCTime(time: Date): Promise<void> {
     headers: {
       "Content-type": "application/json; charset=UTF-8",
     },
-    body: JSON.stringify(time.getTime()),
+    body: JSON.stringify(time.getTime() / 1000),
   });
 
   if (res.status >= 400) {
