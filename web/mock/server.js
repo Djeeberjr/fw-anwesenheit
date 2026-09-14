@@ -64,16 +64,9 @@ app.post("/api/mapping", (req, res) => {
     return res.status(400).json({ error: "Invalid request body" });
   }
 
-  // Check if ID already exists
-  const existing = mappings.find((entry) => entry[0] === id);
-  if (existing) {
-    return res.status(409).json({ error: "ID already exists" });
-  }
+  mockData.mapping[id] = name;
 
-  // Add new mapping
-  mockData.mappings.push([id, name]);
-
-  res.status(201).send("");
+  res.status(201).send();
 });
 
 app.get("/api/day", (req, res) => {
