@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Modal from "./Modal.svelte";
+  import Modal from "./../lib/Modal.svelte";
 
   let { onSubmitted }: { onSubmitted?: (from: Date, to: Date) => void } =
     $props();

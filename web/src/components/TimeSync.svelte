@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { getRTCTime, setRTCTime } from "./api";
+  import { getRTCTime, setRTCTime } from "./../lib/api";
 
   let serverTime: Date | null = null;
   let clientTime: Date | null = null;

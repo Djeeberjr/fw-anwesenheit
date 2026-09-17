@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { removeDay } from "./api";
-  import { cleanupPrepare, type DayToBeRemoved } from "./cleanup";
-  import { dayToDate } from "./Day";
+  import { removeDay } from "./../lib/api";
+  import { cleanupPrepare, type DayToBeRemoved } from "./../lib/cleanup";
+  import { dayToDate } from "./../lib/Day";
 
   let fromDate: string | undefined = $state();
   let toDate: string | undefined = $state();

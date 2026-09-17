@@ -1,18 +1,25 @@
 <script lang="ts">
-  let { id, onAdd }: { id: string; onAdd?: (id: string) => void } = $props();
+  import { onMount } from "svelte";
 
-  let lastID = id;
+  let { onAdd }: { onAdd?: (id: string) => void } = $props();
+
+  let id = $state("");
   let flashing = $state(false);
 
-  $effect(() => {
-    if (lastID != id) {
-      flashing = true;
+  onMount(() => {
+    let sse = new EventSource("/api/idevent");
+    sse.addEventListener("msg", function (e) {
+      const newID = e.data;
 
-      setTimeout(() => {
-        flashing = false;
-      }, 1100);
-    }
-    lastID = id;
+      if (id != newID) {
+        flashing = true;
+
+        setTimeout(() => {
+          flashing = false;
+        }, 1100);
+      }
+      id = newID;
+    });
   });
 </script>
 
@@ -37,7 +44,7 @@
 
 <style scoped>
   .flash {
-    animation: flash-green 1s;
+    animation: flash-green 1.2s;
   }
 
   @keyframes flash-green {

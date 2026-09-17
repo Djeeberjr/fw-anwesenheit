@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { addMapping } from "./api";
-  import Modal from "./Modal.svelte";
+  import { addMapping } from "../lib/api";
+  import Modal from "./../lib/Modal.svelte";
 
   let {
     onSubmitted,

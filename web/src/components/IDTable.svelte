@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { type IDMap } from "./IDMapping";
+  import { type IDMap } from "./../lib/IDMapping";
 
   let {
     onEdit,
