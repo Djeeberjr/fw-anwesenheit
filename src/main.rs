@@ -78,7 +78,7 @@ async fn main(spawner: Spawner) -> ! {
         shared_store.clone(),
         chan,
         mapping_loader,
-        rtc.clone()
+        rtc.clone(),
     );
 
     /****************************** Spawning tasks ***********************************/
@@ -113,6 +113,8 @@ async fn main(spawner: Spawner) -> ! {
 
                 if added {
                     FEEDBACK_STATE.signal(feedback::FeedbackState::Ack);
+                } else {
+                    FEEDBACK_STATE.signal(feedback::FeedbackState::SilentAck);
                 }
             }
         }
