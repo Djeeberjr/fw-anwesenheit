@@ -25,7 +25,7 @@
           inherit system overlays;
         };
 
-        rustToolchain = pkgs.rust-bin.nightly."2025-11-04".default.override {
+        rustToolchain = pkgs.rust-bin.nightly."2026-09-29".default.override {
           targets = [ "riscv32imac-unknown-none-elf" ];
           extensions = [
             "rust-src"
