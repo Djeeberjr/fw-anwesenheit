@@ -34,7 +34,6 @@ embassy-sync = { version = "0.7.2", features = ["log"] }
 
 embassy-net = { version = "0.7.0", features = [ "dhcpv4", "medium-ethernet", "tcp", "udp" ] }
 smoltcp = { version = "0.12.0", default-features = false, features = [ "medium-ethernet", "multicast", "proto-dhcpv4", "proto-dns", "proto-ipv4", "socket-dns", "socket-icmp", "socket-raw", "socket-tcp", "socket-udp" ] }
-bleps = { git = "https://github.com/bjoernQ/bleps", package = "bleps", rev = "a5148d8ae679e021b78f53fd33afb8bb35d0b62e", features = [ "async", "macros" ] }
 edge-dhcp = { version = "0.6.0", features = ["log"] }
 edge-nal = "0.5.0"
 edge-nal-embassy = { version = "0.6.0", features = ["log"] }
